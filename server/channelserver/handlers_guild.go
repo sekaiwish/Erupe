@@ -1304,7 +1304,6 @@ func handleMsgMhfEnumerateGuildItem(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfEnumerateGuildItem)
 	var boxContents []byte
 	var data []byte
-	var tempData string
 	err := s.server.db.QueryRow("SELECT item_box FROM guilds WHERE id = $1", int(pkt.GuildId)).Scan(&boxContents)
 	if err != nil {
 		s.logger.Fatal("Failed to get guild item box contents from db", zap.Error(err))
@@ -1312,6 +1311,7 @@ func handleMsgMhfEnumerateGuildItem(s *Session, p mhfpacket.MHFPacket) {
 		if len(boxContents) == 0 {
 			data, _ = hex.DecodeString("0000000000000000")
 		} else {
+			var tempData string
 			amount := len(boxContents) / 4
 			tempData += fmt.Sprintf("%04x", amount) + "000000000000"
 			for i := 0; i < amount; i++ {
@@ -1328,10 +1328,74 @@ func handleMsgMhfEnumerateGuildItem(s *Session, p mhfpacket.MHFPacket) {
 	doAckBufSucceed(s, pkt.AckHandle, data)
 }
 
+type Item struct{
+	ItemId uint16
+	Amount uint16
+}
+
 func handleMsgMhfUpdateGuildItem(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfUpdateGuildItem)
-	// TODO: store updated item stacks in db with pkt.Items[]
-	// format []item {itemid uint16, amount uint16}
+
+	// Get item cache from DB
+	var boxContents []byte
+	var oldItems []Item
+	err := s.server.db.QueryRow("SELECT item_box FROM guilds WHERE id = $1", int(pkt.GuildId)).Scan(&boxContents)
+	if err != nil {
+		s.logger.Fatal("Failed to get guild item box contents from db", zap.Error(err))
+	} else {
+		amount := len(boxContents) / 4
+		oldItems = make([]Item, amount)
+		for i := 0; i < amount; i++ {
+			oldItems[i].ItemId = binary.BigEndian.Uint16(boxContents[i*4:i*4+2])
+			oldItems[i].Amount = binary.BigEndian.Uint16(boxContents[i*4+2:i*4+4])
+		}
+	}
+
+	// Update item stacks
+	newItems := make([]Item, len(oldItems))
+	copy(newItems, oldItems)
+	for i := 0; i < int(pkt.Amount); i++ {
+		for j := 0; j <= len(oldItems); j++ {
+			if j == len(oldItems) {
+				var newItem Item
+				newItem.ItemId = pkt.Items[i].ItemId
+				newItem.Amount = pkt.Items[i].Amount
+				newItems = append(newItems, newItem)
+				break
+			}
+			if pkt.Items[i].ItemId == oldItems[j].ItemId {
+				newItems[j].Amount = pkt.Items[i].Amount
+				break
+			}
+		}
+	}
+
+	// Delete empty item stacks
+	for i := len(newItems) - 1; i >= 0; i-- {
+		if int(newItems[i].Amount) == 0 {
+			fmt.Println("deleted a stack>", i)
+			copy(newItems[i:], newItems[i + 1:])
+			newItems[len(newItems) - 1] = make([]Item, 1)[0]
+			newItems = newItems[:len(newItems) - 1]
+		}
+	}
+
+	// Create new item cache
+	var result []byte
+	for i := 0; i < len(newItems); i++ {
+		b := make([]byte, 4)
+		binary.BigEndian.PutUint16(b[0:], newItems[i].ItemId)
+		binary.BigEndian.PutUint16(b[2:], newItems[i].Amount)
+
+		result = append(result[:], b[:]...)
+	}
+
+	// Upload new item cache
+	_, err = s.server.db.Exec("UPDATE guilds SET item_box = $1 WHERE id = $2", result, int(pkt.GuildId))
+	if err != nil {
+		s.logger.Fatal("Failed to update guild item box contents in db", zap.Error(err))
+	}
+
 	doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
 }
 
