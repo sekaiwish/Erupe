@@ -1470,12 +1470,13 @@ func handleMsgMhfGuildHuntdata(s *Session, p mhfpacket.MHFPacket) {
 	doAckBufSucceed(s, pkt.AckHandle, data)
 }
 
-// "Enumrate_guild_msg_board"
-func handleMsgSysReserve202(s *Session, p mhfpacket.MHFPacket) {}
+func handleMsgMhfEnumerateGuildMessageBoard(s *Session, p mhfpacket.MHFPacket) {
+	pkt := p.(*mhfpacket.MsgMhfEnumerateGuildMessageBoard)
+	doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
+}
 
-// "Is_update_guild_msg_board"
-func handleMsgSysReserve203(s *Session, p mhfpacket.MHFPacket) {
-	pkt := p.(*mhfpacket.MsgSysReserve203)
+func handleMsgMhfUpdateGuildMessageBoard(s *Session, p mhfpacket.MHFPacket) {
+	pkt := p.(*mhfpacket.MsgMhfUpdateGuildMessageBoard)
 	doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
 }
 
