@@ -1309,7 +1309,6 @@ func handleMsgMhfEnumerateGuildItem(s *Session, p mhfpacket.MHFPacket) {
 	if err != nil {
 		s.logger.Fatal("Failed to get guild item box contents from db", zap.Error(err))
 	} else {
-		fmt.Println(boxContents)
 		if len(boxContents) == 0 {
 			data, _ = hex.DecodeString("0000000000000000")
 		} else {
