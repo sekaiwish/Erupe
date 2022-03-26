@@ -1373,7 +1373,6 @@ func handleMsgMhfUpdateGuildItem(s *Session, p mhfpacket.MHFPacket) {
 	// Delete empty item stacks
 	for i := len(newItems) - 1; i >= 0; i-- {
 		if int(newItems[i].Amount) == 0 {
-			fmt.Println("deleted a stack>", i)
 			copy(newItems[i:], newItems[i + 1:])
 			newItems[len(newItems) - 1] = make([]Item, 1)[0]
 			newItems = newItems[:len(newItems) - 1]
