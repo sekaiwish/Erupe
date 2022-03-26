@@ -21,7 +21,7 @@ function checkAuthResult() {
     } else if (loginResult == "AUTH_SUCCESS") {
 		saveAccount();
 		createGoodAlert("Connected.");
-		createNormalAlert("After selecting a character, press [Start] button.");
+		createNormalAlert("After selecting a character, press [Start]");
         window.location.href = 'charsel.html'
     } else {
 		elementID.style.display = "none";
@@ -61,13 +61,13 @@ $(function() {
     password = $("#password").val();
 	
 	if (username == ""){
-		createErrorAlert("Please insert Erupe ID !");
+		createErrorAlert("Please insert Erupe ID!");
 	}
 	if (password == ""){
-		createErrorAlert("Please insert Password !");
+		createErrorAlert("Please insert Password!");
 	}
 	else{
-		createNormalAlert("Authentification...");
+		createNormalAlert("Authenticating...");
 		try{
 			window.external.loginCog(username, password, password);
 			} catch(e){

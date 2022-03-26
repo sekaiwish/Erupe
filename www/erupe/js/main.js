@@ -81,11 +81,11 @@ function CheckMessage(message){
 		createGoodAlert(message);
 	}
 	// Normal Alert
-	else if (message == "Authentification..."){
-		createNormalAlert(message);	
+	else if (message == "Authenticating..."){
+		createNormalAlert(message);
 	}
-	else if (message == "After selecting a character, press [Start] button."){
-		createNormalAlert(message);		
+	else if (message == "After selecting a character, press [Start]"){
+		createNormalAlert(message);
 	}
 	// Error Alert
 	else {
@@ -95,7 +95,7 @@ function CheckMessage(message){
 
 function doLauncherInitalize() {
 	createWinsockAlert("Winsock Ver. [2.2]");
-	createNormalAlert("After entering Erupe ID and Password, press [Connect] button.");
+	createNormalAlert("After entering Erupe ID and Password, press [Connect]");
     try{
         window.external.getMhfMutexNumber();
     } catch(e){
