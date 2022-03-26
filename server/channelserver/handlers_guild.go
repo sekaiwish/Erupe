@@ -1302,10 +1302,22 @@ func handleMsgMhfGetGuildTargetMemberNum(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfEnumerateGuildItem(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfEnumerateGuildItem)
-
-	data, _ := hex.DecodeString("000100004cfa00010017000300000000")
+	// uint16 number of item stacks
+	// 6 bytes (uint16 uint32?)
+	// [
+	// uint16 item id
+	// uint16 number of item
+	// uint64 unk (only if not last item?)
+	// ]
+	// TODO: store dictionary of items in db with pkt.Items[]
+	data, _ := hex.DecodeString("0003FFFFFFFFFFFF001A0004FFFFFFFFFFFFFFFF00190001FFFFFFFFFFFFFFFF00180001")
 
 	doAckBufSucceed(s, pkt.AckHandle, data)
+}
+
+func handleMsgMhfUpdateGuildItem(s *Session, p mhfpacket.MHFPacket) {
+	pkt := p.(*mhfpacket.MsgMhfUpdateGuildItem)
+	doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
 }
 
 func handleMsgMhfUpdateGuildIcon(s *Session, p mhfpacket.MHFPacket) {
@@ -1480,5 +1492,3 @@ func handleMsgMhfEnumerateInvGuild(s *Session, p mhfpacket.MHFPacket) {}
 func handleMsgMhfOperationInvGuild(s *Session, p mhfpacket.MHFPacket) {}
 
 func handleMsgMhfUpdateGuildcard(s *Session, p mhfpacket.MHFPacket) {}
-
-func handleMsgMhfUpdateGuildItem(s *Session, p mhfpacket.MHFPacket) {}
