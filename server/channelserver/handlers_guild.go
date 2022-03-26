@@ -1302,21 +1302,38 @@ func handleMsgMhfGetGuildTargetMemberNum(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfEnumerateGuildItem(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfEnumerateGuildItem)
-	// uint16 number of item stacks
-	// 6 bytes (uint16 uint32?)
-	// [
-	// uint16 item id
-	// uint16 number of item
-	// uint64 unk (only if not last item?)
-	// ]
-	// TODO: store dictionary of items in db with pkt.Items[]
-	data, _ := hex.DecodeString("0003FFFFFFFFFFFF001A0004FFFFFFFFFFFFFFFF00190001FFFFFFFFFFFFFFFF00180001")
-
+	var boxContents []byte
+	var data []byte
+	var tempData string
+	err := s.server.db.QueryRow("SELECT item_box FROM guilds WHERE id = $1", int(pkt.GuildId)).Scan(&boxContents)
+	if err != nil {
+		s.logger.Fatal("Failed to get guild item box contents from db", zap.Error(err))
+	} else {
+		fmt.Println(boxContents)
+		if len(boxContents) == 0 {
+			data, _ = hex.DecodeString("0000000000000000")
+		} else {
+			amount := len(boxContents) / 4
+			tempData += fmt.Sprintf("%04x", amount) + "000000000000"
+			for i := 0; i < amount; i++ {
+				for j := 0; j < 4; j++ {
+					tempData += fmt.Sprintf("%02x", boxContents[4*i+j])
+				}
+				if i + 1 != amount {
+					tempData += "0000000000000000"
+				}
+			}
+			fmt.Println(tempData)
+			data, _ = hex.DecodeString(tempData)
+		}
+	}
 	doAckBufSucceed(s, pkt.AckHandle, data)
 }
 
 func handleMsgMhfUpdateGuildItem(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfUpdateGuildItem)
+	// TODO: store updated item stacks in db with pkt.Items[]
+	// format []item {itemid uint16, amount uint16}
 	doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
 }
 
