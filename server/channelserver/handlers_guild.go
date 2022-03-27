@@ -1549,7 +1549,6 @@ func handleMsgMhfEnumerateGuildMessageBoard(s *Session, p mhfpacket.MHFPacket) {
 		if len(postData) == 0 {
 			doAckBufSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
 		} else {
-			fmt.Println(hex.Dump(postData))
 			doAckBufSucceed(s, pkt.AckHandle, postData)
 		}
 	}
