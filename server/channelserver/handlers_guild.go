@@ -1622,11 +1622,11 @@ func handleMsgMhfUpdateGuildMessageBoard(s *Session, p mhfpacket.MHFPacket) {
 	case 0: // Create message
 		req := make([]CreateMessage)
 		req.PostType = bf.ReadUint32() // 0 = message, 1 = news
-    req.StampId = bf.ReadUint32()
-    req.TitleLength = bf.ReadUint32()
-    req.BodyLength = bf.ReadUint32()
-    req.Title = bf.ReadBytes(uint(m.TitleLength))
-    req.Body = bf.ReadBytes(uint(m.BodyLength))
+		req.StampId = bf.ReadUint32()
+		req.TitleLength = bf.ReadUint32()
+		req.BodyLength = bf.ReadUint32()
+		req.Title = bf.ReadBytes(uint(m.TitleLength))
+		req.Body = bf.ReadBytes(uint(m.BodyLength))
 	case 1: // Delete message
 		req := make([]DeleteMessage)
 		req.PostType = bf.ReadUint32()
@@ -1636,9 +1636,9 @@ func handleMsgMhfUpdateGuildMessageBoard(s *Session, p mhfpacket.MHFPacket) {
 		req.PostType = bf.ReadUint32()
 		req.Timestamp = bf.ReadUint64()
 		req.TitleLength = bf.ReadUint32()
-    req.BodyLength = bf.ReadUint32()
-    req.Title = bf.ReadBytes(uint(m.TitleLength))
-    req.Body = bf.ReadBytes(uint(m.BodyLength))
+		req.BodyLength = bf.ReadUint32()
+		req.Title = bf.ReadBytes(uint(m.TitleLength))
+		req.Body = bf.ReadBytes(uint(m.BodyLength))
 	case 3: // Update stamp
 		req := make([]DeleteMessage)
 		req.PostType = bf.ReadUint32()
