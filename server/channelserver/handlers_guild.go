@@ -1535,38 +1535,27 @@ func handleMsgMhfGuildHuntdata(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfEnumerateGuildMessageBoard(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfEnumerateGuildMessageBoard)
 
-	err := s.server.db.QueryRow("SELECT testpost FROM test")
-
-
 	var testPost string
 	testPost += "00000001" // post count uint32
 	testPost += "00000000" // unk uint32
 	testPost += "00000002" // author id uint32
 	testPost += "0000000062407fff" // time_t uint64
 	testPost += "0000000a" // likes uint32
+	testPost += "00" // liked bool
 	testPost += "00000008" // stamp id uint32
-	testPost += "00000002" // title length uint32
-	testPost += "00" // unk uint8
-	testPost += "6869" // title []byte
-	testPost += "00" // unk uint8
+	testPost += "00000001" // title length uint32
+	testPost += "61" // 'a'
+	testPost += "00000001" // body length uint32
+	testPost += "62" // 'b'
 
-	//testPost += "0000000000000000000000000000000000000000000000000000000000000000"
-	testPost += "0101010101010101010101010101010101010101010101010101010101010101"
-
-	testPost += "68656c6c6f" // title []byte
-
-	/*
-	testPost += "00000005" // body length uint32
-	testPost += "00" // unk uint8
-	testPost += "68656c6c6f" // title []byte
-	testPost += "00" // unk uint8
-	*/
+	// use test string from db
+	err := s.server.db.QueryRow("SELECT testpost FROM test").Scan(&testPost)
+	if err != nil {
+		s.logger.Fatal("test error", zap.Error(err))
+	}
 
 	data, _ := hex.DecodeString(testPost)
 	doAckBufSucceed(s, pkt.AckHandle, data)
-	//data, _ := hex.DecodeString("0000000100000000000000020000000062407fff0000000a00000008000000036161610000000568656c6c6f000700080009000a000b000c000d000e000f0010001100120013001400150016001700180019001a001b001c001d001e001f0020")
-
-	//doAckBufSucceed(s, pkt.AckHandle, data)
 }
 
 func handleMsgMhfUpdateGuildMessageBoard(s *Session, p mhfpacket.MHFPacket) {
