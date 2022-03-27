@@ -147,31 +147,31 @@ func handleMsgMhfGetKeepLoginBoostStatus(s *Session, p mhfpacket.MHFPacket) {
 		loginBoostStatus = []loginBoost{
 			{
 				WeekReq:    1,    // weeks needed
-				WeekCount:  0,    // weeks passed
+				WeekCount:  1,    // weeks passed
 				Available:  true, // available
 				Expiration: 0,    //uint32(t.Add(120 * time.Minute).Unix()), // uncomment to enable permanently
 			},
 			{
 				WeekReq:    2,
-				WeekCount:  0,
+				WeekCount:  2,
 				Available:  true,
 				Expiration: 0,
 			},
 			{
 				WeekReq:    3,
-				WeekCount:  0,
+				WeekCount:  3,
 				Available:  true,
 				Expiration: 0,
 			},
 			{
 				WeekReq:    4,
-				WeekCount:  0,
+				WeekCount:  4,
 				Available:  true,
 				Expiration: 0,
 			},
 			{
 				WeekReq:    5,
-				WeekCount:  0,
+				WeekCount:  5,
 				Available:  true,
 				Expiration: 0,
 			},
@@ -186,7 +186,7 @@ func handleMsgMhfGetKeepLoginBoostStatus(s *Session, p mhfpacket.MHFPacket) {
 		if loginBoostStatus[d].WeekReq == CurrentWeek || loginBoostStatus[d].WeekCount != 0 {
 			loginBoostStatus[d].WeekCount = CurrentWeek
 		}
-		if !loginBoostStatus[d].Available && loginBoostStatus[d].WeekCount >= loginBoostStatus[d].WeekReq && uint32(time.Now().In(time.FixedZone("UTC+1", 1*60*60)).Unix()) >= loginBoostStatus[d].Expiration {
+		if !loginBoostStatus[d].Available && loginBoostStatus[d].WeekCount == loginBoostStatus[d].WeekReq && uint32(time.Now().In(time.FixedZone("UTC+1", 1*60*60)).Unix()) >= loginBoostStatus[d].Expiration {
 			loginBoostStatus[d].Expiration = 1
 		}
 		if !insert {
