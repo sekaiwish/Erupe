@@ -1535,6 +1535,26 @@ func handleMsgMhfGuildHuntdata(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfEnumerateGuildMessageBoard(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfEnumerateGuildMessageBoard)
 
+	var postData []byte
+	var err error
+	guild, _ := GetGuildInfoByCharacterId(s, s.charID)
+	if pkt.BoardType == 0 {
+		err = s.server.db.QueryRow("SELECT message_posts FROM guilds WHERE id = $1", guild.ID).Scan(&postData)
+	} else {
+		err = s.server.db.QueryRow("SELECT news_posts FROM guilds WHERE id = $1", guild.ID).Scan(&postData)
+	}
+	if err != nil {
+		s.logger.Fatal("Failed to get guild messages from db", zap.Error(err))
+	} else {
+		if len(postData) == 0 {
+			doAckBufSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
+		} else {
+			fmt.Println(hex.Dump(postData))
+			doAckBufSucceed(s, pkt.AckHandle, postData)
+		}
+	}
+
+	/*
 	var testPost string
 	testPost += "00000001" // post count uint32
 	testPost += "00000000" // unk uint32
@@ -1548,14 +1568,16 @@ func handleMsgMhfEnumerateGuildMessageBoard(s *Session, p mhfpacket.MHFPacket) {
 	testPost += "00000001" // body length uint32
 	testPost += "62" // 'b'
 
-	// use test string from db
+	example with 2 posts:
+	0000000200000000000000020000000062407fff0000000a01000000080000000161000000016200000000000000020000000062407fff0000000a000000000900000001630000000164
+
 	err := s.server.db.QueryRow("SELECT testpost FROM test").Scan(&testPost)
 	if err != nil {
 		s.logger.Fatal("test error", zap.Error(err))
 	}
-
 	data, _ := hex.DecodeString(testPost)
 	doAckBufSucceed(s, pkt.AckHandle, data)
+	*/
 }
 
 func handleMsgMhfUpdateGuildMessageBoard(s *Session, p mhfpacket.MHFPacket) {
