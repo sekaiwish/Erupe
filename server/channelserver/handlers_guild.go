@@ -1534,7 +1534,7 @@ func handleMsgMhfGuildHuntdata(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfEnumerateGuildMessageBoard(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfEnumerateGuildMessageBoard)
-
+	// TODO: create db entry for last enumeration timestamp for login notifications
 	var postData []byte
 	var err error
 	guild, _ := GetGuildInfoByCharacterId(s, s.charID)
@@ -1579,8 +1579,77 @@ func handleMsgMhfEnumerateGuildMessageBoard(s *Session, p mhfpacket.MHFPacket) {
 	*/
 }
 
+type CreateMessage struct {
+	PostType uint32
+	StampId uint32
+	TitleLength uint32
+	BodyLength uint32
+	Title []byte
+	Body []byte
+}
+
+type DeleteMessage struct {
+	PostType uint32
+	Timestamp uint64
+}
+
+type UpdateMessage struct {
+	PostType uint32
+	Timestamp uint64
+	TitleLength uint32
+	BodyLength uint32
+	Title []byte
+	Body []byte
+}
+
+type UpdateStamp struct {
+	PostType uint32
+	Timestamp uint64
+	StampId uint32
+}
+
+type LikeMessage struct {
+	PostType uint32
+	Timestamp uint64
+	LikeState bool
+}
+
 func handleMsgMhfUpdateGuildMessageBoard(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfUpdateGuildMessageBoard)
+	bf := byteframe.NewByteFrameFromBytes(pkt.Request)
+	fmt.Println(hex.Dump(bf.Data()))
+	switch pkt.MessageOp {
+	case 0: // Create message
+		req := make([]CreateMessage)
+		req.PostType = bf.ReadUint32() // 0 = message, 1 = news
+    req.StampId = bf.ReadUint32()
+    req.TitleLength = bf.ReadUint32()
+    req.BodyLength = bf.ReadUint32()
+    req.Title = bf.ReadBytes(uint(m.TitleLength))
+    req.Body = bf.ReadBytes(uint(m.BodyLength))
+	case 1: // Delete message
+		req := make([]DeleteMessage)
+		req.PostType = bf.ReadUint32()
+		req.Timestamp = bf.ReadUint64()
+	case 2: // Update message
+		req := make([]DeleteMessage)
+		req.PostType = bf.ReadUint32()
+		req.Timestamp = bf.ReadUint64()
+		req.TitleLength = bf.ReadUint32()
+    req.BodyLength = bf.ReadUint32()
+    req.Title = bf.ReadBytes(uint(m.TitleLength))
+    req.Body = bf.ReadBytes(uint(m.BodyLength))
+	case 3: // Update stamp
+		req := make([]DeleteMessage)
+		req.PostType = bf.ReadUint32()
+		req.Timestamp = bf.ReadUint64()
+		req.StampId = bf.ReadUint32()
+	case 4: // Like message
+		req := make([]LikeMessage)
+		req.Unk0 = bf.ReadUint32()
+		req.Timestamp = bf.ReadUint32()
+		req.LikeState = bf.ReadBool()
+	}
 	doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
 }
 
