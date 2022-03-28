@@ -1617,38 +1617,67 @@ type LikeMessage struct {
 func handleMsgMhfUpdateGuildMessageBoard(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfUpdateGuildMessageBoard)
 	bf := byteframe.NewByteFrameFromBytes(pkt.Request)
-	fmt.Println(hex.Dump(bf.Data()))
+	guild, _ := GetGuildInfoByCharacterId(s, s.charID)
 	switch pkt.MessageOp {
 	case 0: // Create message
-		var req CreateMessage
-		req.PostType = bf.ReadUint32() // 0 = message, 1 = news
-		req.StampId = bf.ReadUint32()
-		req.TitleLength = bf.ReadUint32()
-		req.BodyLength = bf.ReadUint32()
-		req.Title = bf.ReadBytes(uint(req.TitleLength))
-		req.Body = bf.ReadBytes(uint(req.BodyLength))
+		postType := bf.ReadUint32() // 0 = message, 1 = news
+		stampId := bf.ReadUint32()
+		titleLength := bf.ReadBytes(4)
+		bodyLength := bf.ReadBytes(4)
+		title := bf.ReadBytes(uint(binary.BigEndian.Uint32(titleLength)))
+		body := bf.ReadBytes(uint(binary.BigEndian.Uint32(bodyLength)))
+		post := BytesToString(titleLength, title, bodyLength, body)
+		_, err := s.server.db.Exec("INSERT INTO guild_posts (guild_id, author_id, stamp_id, post_type, post) VALUES ($1, $2, $3, $4, $5)", guild.ID, s.charID, int(stampId), int(postType), post)
+		if err != nil {
+			s.logger.Fatal("Failed to add new guild message to db", zap.Error(err))
+		}
+		// TODO: if there are too many messages, purge excess
+		_, err = s.server.db.Exec("")
+		if err != nil {
+			s.logger.Fatal("Failed to remove excess guild messages from db", zap.Error(err))
+		}
 	case 1: // Delete message
-		var req DeleteMessage
-		req.PostType = bf.ReadUint32()
-		req.Timestamp = bf.ReadUint64()
+		postType := bf.ReadUint32()
+		timestamp := bf.ReadUint64()
+		_, err := s.server.db.Exec("DELETE FROM guild_posts WHERE post_type = $1 AND created_at = $2 AND guild_id = $3", int(postType), int(timestamp), guild.ID)
+		if err != nil {
+			s.logger.Fatal("Failed to delete guild message from db", zap.Error(err))
+		}
 	case 2: // Update message
-		var req UpdateMessage
-		req.PostType = bf.ReadUint32()
-		req.Timestamp = bf.ReadUint64()
-		req.TitleLength = bf.ReadUint32()
-		req.BodyLength = bf.ReadUint32()
-		req.Title = bf.ReadBytes(uint(req.TitleLength))
-		req.Body = bf.ReadBytes(uint(req.BodyLength))
+		postType := bf.ReadUint32()
+		timestamp := bf.ReadUint64()
+		titleLength := bf.ReadBytes(4)
+		bodyLength := bf.ReadBytes(4)
+		title := bf.ReadBytes(uint(binary.BigEndian.Uint32(titleLength)))
+		body := bf.ReadBytes(uint(binary.BigEndian.Uint32(bodyLength)))
+		post := BytesToString(titleLength, title, bodyLength, body)
+		_, err := s.server.db.Exec("UPDATE guild_posts SET post = $1 WHERE post_type = $2 AND created_at = $3 AND guild_id = $4", post, int(postType), int(timestamp), guild.ID)
+		if err != nil {
+			s.logger.Fatal("Failed to update guild message in db", zap.Error(err))
+		}
 	case 3: // Update stamp
-		var req UpdateStamp
-		req.PostType = bf.ReadUint32()
-		req.Timestamp = bf.ReadUint64()
-		req.StampId = bf.ReadUint32()
+		postType := bf.ReadUint32()
+		timestamp := bf.ReadUint64()
+		stampId := bf.ReadUint32()
+		_, err := s.server.db.Exec("UPDATE guild_posts SET stamp_id = $1 WHERE post_type = $2 AND created_at = $3 AND guild_id = $4", int(stampId), int(postType), int(timestamp), guild.ID)
+		if err != nil {
+			s.logger.Fatal("Failed to update guild message stamp in db", zap.Error(err))
+		}
 	case 4: // Like message
-		var req LikeMessage
-		req.PostType = bf.ReadUint32()
-		req.Timestamp = bf.ReadUint64()
-		req.LikeState = bf.ReadBool()
+		postType := bf.ReadUint32()
+		timestamp := bf.ReadUint64()
+		likeState := bf.ReadUint8()
+		if likeState == 1 {
+			_, err := s.server.db.Exec("UPDATE guild_posts SET likes = likes + 1 WHERE post_type = $1 AND created_at = $2 AND guild_id = $3", int(postType), int(timestamp), guild.ID)
+			if err != nil {
+				s.logger.Fatal("Failed to like guild message in db", zap.Error(err))
+			}
+		} else {
+			_, err := s.server.db.Exec("UPDATE guild_posts SET likes = likes - 1 WHERE post_type = $1 AND created_at = $2 AND guild_id = $3", int(postType), int(timestamp), guild.ID)
+			if err != nil {
+				s.logger.Fatal("Failed to unlike guild message in db", zap.Error(err))
+			}
+		}
 	}
 	doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
 }
