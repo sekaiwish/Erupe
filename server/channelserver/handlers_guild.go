@@ -1534,84 +1534,47 @@ func handleMsgMhfGuildHuntdata(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfEnumerateGuildMessageBoard(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfEnumerateGuildMessageBoard)
-	// TODO: create db entry for last enumeration timestamp for login notifications
-	var postData []byte
-	var err error
 	guild, _ := GetGuildInfoByCharacterId(s, s.charID)
-	if pkt.BoardType == 0 {
-		err = s.server.db.QueryRow("SELECT message_posts FROM guilds WHERE id = $1", guild.ID).Scan(&postData)
-	} else {
-		err = s.server.db.QueryRow("SELECT news_posts FROM guilds WHERE id = $1", guild.ID).Scan(&postData)
-	}
+	msgs, err := s.server.db.Query("SELECT author_id, created_at, stamp_id, likes, post FROM guild_posts WHERE guild_id = $1 AND post_type = $2 ORDER BY created_at DESC", guild.ID, int(pkt.BoardType))
 	if err != nil {
 		s.logger.Fatal("Failed to get guild messages from db", zap.Error(err))
+	}
+	msgsExist := false
+	var postCount int
+	var msgData string
+	for msgs.Next() {
+		msgsExist = true
+		postCount++
+		var msg string
+		var authorId int
+		var timestamp int
+		var stampId int
+		var likes int
+		var post string
+		msgs.Scan(&authorId, &timestamp, &stampId, &likes, &post)
+		msg += fmt.Sprintf("%016x", authorId)
+		msg += fmt.Sprintf("%016x", timestamp)
+		msg += fmt.Sprintf("%08x", likes)
+		msg += "00" // TODO: rewrite this such that we can track a list of charIDs that liked the post
+		msg += fmt.Sprintf("%08x", stampId)
+		msg += post
+		msgData += msg
+	}
+	if msgsExist == false {
+		doAckBufSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
 	} else {
-		if len(postData) == 0 {
-			doAckBufSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
-		} else {
-			doAckBufSucceed(s, pkt.AckHandle, postData)
-		}
+		msgData = fmt.Sprintf("%08x", postCount) + msgData
+		data, _ := hex.DecodeString(msgData)
+		doAckBufSucceed(s, pkt.AckHandle, data)
 	}
+}
 
-	/*
-	var testPost string
-	testPost += "00000001" // post count uint32
-	testPost += "00000000" // unk uint32
-	testPost += "00000002" // author id uint32
-	testPost += "0000000062407fff" // time_t uint64
-	testPost += "0000000a" // likes uint32
-	testPost += "00" // liked bool
-	testPost += "00000008" // stamp id uint32
-	testPost += "00000001" // title length uint32
-	testPost += "61" // 'a'
-	testPost += "00000001" // body length uint32
-	testPost += "62" // 'b'
-
-	example with 2 posts:
-	0000000200000000000000020000000062407fff0000000a01000000080000000161000000016200000000000000020000000062407fff0000000a000000000900000001630000000164
-
-	err := s.server.db.QueryRow("SELECT testpost FROM test").Scan(&testPost)
-	if err != nil {
-		s.logger.Fatal("test error", zap.Error(err))
+func BytesToString(b ...[]byte) string {
+	var r string
+	for _, a := range b {
+		r += hex.EncodeToString(a)
 	}
-	data, _ := hex.DecodeString(testPost)
-	doAckBufSucceed(s, pkt.AckHandle, data)
-	*/
-}
-
-type CreateMessage struct {
-	PostType uint32
-	StampId uint32
-	TitleLength uint32
-	BodyLength uint32
-	Title []byte
-	Body []byte
-}
-
-type DeleteMessage struct {
-	PostType uint32
-	Timestamp uint64
-}
-
-type UpdateMessage struct {
-	PostType uint32
-	Timestamp uint64
-	TitleLength uint32
-	BodyLength uint32
-	Title []byte
-	Body []byte
-}
-
-type UpdateStamp struct {
-	PostType uint32
-	Timestamp uint64
-	StampId uint32
-}
-
-type LikeMessage struct {
-	PostType uint32
-	Timestamp uint64
-	LikeState bool
+	return r
 }
 
 func handleMsgMhfUpdateGuildMessageBoard(s *Session, p mhfpacket.MHFPacket) {
