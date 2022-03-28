@@ -2,9 +2,8 @@ package mhfpacket
 
 import (
  "errors"
- "encoding/hex"
  "io"
- 
+
  	"github.com/Solenataris/Erupe/network/clientctx"
 	"github.com/Solenataris/Erupe/network"
 	"github.com/Andoryuuta/byteframe"
