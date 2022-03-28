@@ -4,6 +4,7 @@
 This fork is mostly for personal use and I am not liable for anything you do with it
 
 ## Installation
+Skip steps 1, 2 and 5 if you already have a functional server
 1. Download (not clone) [xl3lackout's repository][1] using [this link][2]
 2. Extract the zip archive somewhere
 3. Delete the Erupe directory
