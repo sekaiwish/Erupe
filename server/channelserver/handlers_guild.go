@@ -1378,17 +1378,14 @@ func handleMsgMhfUpdateGuildItem(s *Session, p mhfpacket.MHFPacket) {
 	}
 
 	// Create new item cache
-	var result []byte
+	bf := byteframe.NewByteFrame()
 	for i := 0; i < len(newItems); i++ {
-		b := make([]byte, 4)
-		binary.BigEndian.PutUint16(b[0:], newItems[i].ItemId)
-		binary.BigEndian.PutUint16(b[2:], newItems[i].Amount)
-
-		result = append(result[:], b[:]...)
+		bf.WriteUint16(newItems[i].ItemId)
+		bf.WriteUint16(newItems[i].Amount)
 	}
 
 	// Upload new item cache
-	_, err = s.server.db.Exec("UPDATE guilds SET item_box = $1 WHERE id = $2", result, int(pkt.GuildId))
+	_, err = s.server.db.Exec("UPDATE guilds SET item_box = $1 WHERE id = $2", bf.Data(), int(pkt.GuildId))
 	if err != nil {
 		s.logger.Fatal("Failed to update guild item box contents in db", zap.Error(err))
 	}
