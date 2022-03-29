@@ -1303,27 +1303,27 @@ func handleMsgMhfGetGuildTargetMemberNum(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfEnumerateGuildItem(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfEnumerateGuildItem)
 	var boxContents []byte
-	result := byteframe.NewByteFrame()
+	bf := byteframe.NewByteFrame()
 	err := s.server.db.QueryRow("SELECT item_box FROM guilds WHERE id = $1", int(pkt.GuildId)).Scan(&boxContents)
 	if err != nil {
 		s.logger.Fatal("Failed to get guild item box contents from db", zap.Error(err))
 	} else {
 		if len(boxContents) == 0 {
-			result.WriteUint32(0x00)
+			bf.WriteUint32(0x00)
 		} else {
 			amount := len(boxContents) / 4
-			result.WriteUint16(uint16(amount))
-			result.WriteUint32(0x00)
-			result.WriteUint16(0x00)
+			bf.WriteUint16(uint16(amount))
+			bf.WriteUint32(0x00)
+			bf.WriteUint16(0x00)
 			for i := 0; i < amount; i++ {
-				result.WriteUint32(binary.BigEndian.Uint32(boxContents[i*4:i*4+4]))
+				bf.WriteUint32(binary.BigEndian.Uint32(boxContents[i*4:i*4+4]))
 				if i + 1 != amount {
-					result.WriteUint64(0x00)
+					bf.WriteUint64(0x00)
 				}
 			}
 		}
 	}
-	doAckBufSucceed(s, pkt.AckHandle, result.Data())
+	doAckBufSucceed(s, pkt.AckHandle, bf.Data())
 }
 
 type Item struct{
