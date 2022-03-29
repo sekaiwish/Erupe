@@ -13,7 +13,7 @@ CREATE TABLE guild_posts
     post bytea NOT NULL,
     likes int NOT NULL DEFAULT 0,
     created_at int NOT NULL DEFAULT CAST(EXTRACT(epoch FROM now()) AS int),
-    liked_by text
+    liked_by text NOT NULL DEFAULT ''
 );
 
 END;
