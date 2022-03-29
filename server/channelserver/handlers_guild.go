@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"sort"
 	"time"
+	"strings"
+	"strconv"
 
 	"github.com/Andoryuuta/byteframe"
 	"github.com/Solenataris/Erupe/common/bfutil"
@@ -1530,7 +1532,7 @@ func handleMsgMhfGuildHuntdata(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfEnumerateGuildMessageBoard(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfEnumerateGuildMessageBoard)
 	guild, _ := GetGuildInfoByCharacterId(s, s.charID)
-	msgs, err := s.server.db.Query("SELECT author_id, created_at, stamp_id, likes, post FROM guild_posts WHERE guild_id = $1 AND post_type = $2 ORDER BY created_at DESC", guild.ID, int(pkt.BoardType))
+	msgs, err := s.server.db.Query("SELECT author_id, created_at, stamp_id, likes, post, liked_by FROM guild_posts WHERE guild_id = $1 AND post_type = $2 ORDER BY created_at DESC", guild.ID, int(pkt.BoardType))
 	if err != nil {
 		s.logger.Fatal("Failed to get guild messages from db", zap.Error(err))
 	}
@@ -1545,11 +1547,20 @@ func handleMsgMhfEnumerateGuildMessageBoard(s *Session, p mhfpacket.MHFPacket) {
 		var stampId int
 		var likes int
 		var post []byte
-		msgs.Scan(&authorId, &timestamp, &stampId, &likes, &post)
+		var likedBy string
+		msgs.Scan(&authorId, &timestamp, &stampId, &likes, &post, &likedBy)
 		bf.WriteUint64(uint64(authorId))
 		bf.WriteUint64(uint64(timestamp))
 		bf.WriteUint32(uint32(likes))
-		bf.WriteUint8(0) // TODO: rewrite this such that we can track a list of charIDs that liked the post
+		liked := 0
+		likedBySlice := strings.Split(likedBy, ",")
+		for i := 0; i < len(likedBySlice); i++ {
+			j, _ := strconv.ParseInt(likedBySlice[i], 10, 64)
+			if int(j) == int(s.charID) {
+				liked = 1; break
+			}
+		}
+		bf.WriteUint8(uint8(liked))
 		bf.WriteUint32(uint32(stampId))
 		bf.WriteBytes(post)
 	}
@@ -1624,15 +1635,35 @@ func handleMsgMhfUpdateGuildMessageBoard(s *Session, p mhfpacket.MHFPacket) {
 		postType := bf.ReadUint32()
 		timestamp := bf.ReadUint64()
 		likeState := bf.ReadUint8()
-		if likeState == 1 {
-			_, err := s.server.db.Exec("UPDATE guild_posts SET likes = likes + 1 WHERE post_type = $1 AND created_at = $2 AND guild_id = $3", int(postType), int(timestamp), guild.ID)
-			if err != nil {
-				s.logger.Fatal("Failed to like guild message in db", zap.Error(err))
-			}
+		var likedBy string
+		err := s.server.db.QueryRow("SELECT liked_by FROM guild_posts WHERE post_type = $1 AND created_at = $2 AND guild_id = $3", int(postType), int(timestamp), guild.ID).Scan(&likedBy)
+		if err != nil {
+			s.logger.Fatal("Failed to get guild message like data from db", zap.Error(err))
 		} else {
-			_, err := s.server.db.Exec("UPDATE guild_posts SET likes = likes - 1 WHERE post_type = $1 AND created_at = $2 AND guild_id = $3", int(postType), int(timestamp), guild.ID)
-			if err != nil {
-				s.logger.Fatal("Failed to unlike guild message in db", zap.Error(err))
+			if likeState == 1 {
+				if len(likedBy) == 0 {
+					likedBy = strconv.Itoa(int(s.charID))
+				} else {
+					likedBy += "," + strconv.Itoa(int(s.charID))
+				}
+				_, err := s.server.db.Exec("UPDATE guild_posts SET likes = likes + 1, liked_by = $1 WHERE post_type = $2 AND created_at = $3 AND guild_id = $4", likedBy, int(postType), int(timestamp), guild.ID)
+				if err != nil {
+					s.logger.Fatal("Failed to like guild message in db", zap.Error(err))
+				}
+			} else {
+				likedBySlice := strings.Split(likedBy, ",")
+				for i, e := range likedBySlice {
+					if e == strconv.Itoa(int(s.charID)) {
+						likedBySlice[i] = likedBySlice[len(likedBySlice) - 1]
+    				likedBySlice = likedBySlice[:len(likedBySlice) - 1]
+					}
+				}
+				likedBy = strings.Join(likedBySlice, ",")
+				fmt.Println(likedBy)
+				_, err := s.server.db.Exec("UPDATE guild_posts SET likes = likes - 1, liked_by = $1 WHERE post_type = $2 AND created_at = $3 AND guild_id = $4", likedBy, int(postType), int(timestamp), guild.ID)
+				if err != nil {
+					s.logger.Fatal("Failed to unlike guild message in db", zap.Error(err))
+				}
 			}
 		}
 	}
