@@ -1536,40 +1536,31 @@ func handleMsgMhfEnumerateGuildMessageBoard(s *Session, p mhfpacket.MHFPacket) {
 	}
 	msgsExist := false
 	var postCount int
-	var msgData string
+	bf := byteframe.NewByteFrame()
 	for msgs.Next() {
 		msgsExist = true
 		postCount++
-		var msg string
 		var authorId int
 		var timestamp int
 		var stampId int
 		var likes int
-		var post string
+		var post []byte
 		msgs.Scan(&authorId, &timestamp, &stampId, &likes, &post)
-		msg += fmt.Sprintf("%016x", authorId)
-		msg += fmt.Sprintf("%016x", timestamp)
-		msg += fmt.Sprintf("%08x", likes)
-		msg += "00" // TODO: rewrite this such that we can track a list of charIDs that liked the post
-		msg += fmt.Sprintf("%08x", stampId)
-		msg += post
-		msgData += msg
+		bf.WriteUint64(uint64(authorId))
+		bf.WriteUint64(uint64(timestamp))
+		bf.WriteUint32(uint32(likes))
+		bf.WriteUint8(0) // TODO: rewrite this such that we can track a list of charIDs that liked the post
+		bf.WriteUint32(uint32(stampId))
+		bf.WriteBytes(post)
 	}
 	if msgsExist == false {
 		doAckBufSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
 	} else {
-		msgData = fmt.Sprintf("%08x", postCount) + msgData
-		data, _ := hex.DecodeString(msgData)
-		doAckBufSucceed(s, pkt.AckHandle, data)
+		data := byteframe.NewByteFrame()
+		data.WriteUint32(uint32(postCount))
+		data.WriteBytes(bf.Data())
+		doAckBufSucceed(s, pkt.AckHandle, data.Data())
 	}
-}
-
-func BytesToString(b ...[]byte) string {
-	var r string
-	for _, a := range b {
-		r += hex.EncodeToString(a)
-	}
-	return r
 }
 
 func handleMsgMhfUpdateGuildMessageBoard(s *Session, p mhfpacket.MHFPacket) {
@@ -1580,12 +1571,16 @@ func handleMsgMhfUpdateGuildMessageBoard(s *Session, p mhfpacket.MHFPacket) {
 	case 0: // Create message
 		postType := bf.ReadUint32() // 0 = message, 1 = news
 		stampId := bf.ReadUint32()
-		titleLength := bf.ReadBytes(4)
-		bodyLength := bf.ReadBytes(4)
-		title := bf.ReadBytes(uint(binary.BigEndian.Uint32(titleLength)))
-		body := bf.ReadBytes(uint(binary.BigEndian.Uint32(bodyLength)))
-		post := BytesToString(titleLength, title, bodyLength, body)
-		_, err := s.server.db.Exec("INSERT INTO guild_posts (guild_id, author_id, stamp_id, post_type, post) VALUES ($1, $2, $3, $4, $5)", guild.ID, s.charID, int(stampId), int(postType), post)
+		titleLength := bf.ReadUint32()
+		bodyLength := bf.ReadUint32()
+		title := bf.ReadBytes(uint(titleLength))
+		body := bf.ReadBytes(uint(bodyLength))
+		post := byteframe.NewByteFrame()
+		post.WriteUint32(uint32(titleLength))
+		post.WriteBytes(title)
+		post.WriteUint32(uint32(bodyLength))
+		post.WriteBytes(body)
+		_, err := s.server.db.Exec("INSERT INTO guild_posts (guild_id, author_id, stamp_id, post_type, post) VALUES ($1, $2, $3, $4, $5)", guild.ID, s.charID, int(stampId), int(postType), post.Data())
 		if err != nil {
 			s.logger.Fatal("Failed to add new guild message to db", zap.Error(err))
 		}
@@ -1604,12 +1599,16 @@ func handleMsgMhfUpdateGuildMessageBoard(s *Session, p mhfpacket.MHFPacket) {
 	case 2: // Update message
 		postType := bf.ReadUint32()
 		timestamp := bf.ReadUint64()
-		titleLength := bf.ReadBytes(4)
-		bodyLength := bf.ReadBytes(4)
-		title := bf.ReadBytes(uint(binary.BigEndian.Uint32(titleLength)))
-		body := bf.ReadBytes(uint(binary.BigEndian.Uint32(bodyLength)))
-		post := BytesToString(titleLength, title, bodyLength, body)
-		_, err := s.server.db.Exec("UPDATE guild_posts SET post = $1 WHERE post_type = $2 AND created_at = $3 AND guild_id = $4", post, int(postType), int(timestamp), guild.ID)
+		titleLength := bf.ReadUint32()
+		bodyLength := bf.ReadUint32()
+		title := bf.ReadBytes(uint(titleLength))
+		body := bf.ReadBytes(uint(bodyLength))
+		post := byteframe.NewByteFrame()
+		post.WriteUint32(uint32(titleLength))
+		post.WriteBytes(title)
+		post.WriteUint32(uint32(bodyLength))
+		post.WriteBytes(body)
+		_, err := s.server.db.Exec("UPDATE guild_posts SET post = $1 WHERE post_type = $2 AND created_at = $3 AND guild_id = $4", post.Data(), int(postType), int(timestamp), guild.ID)
 		if err != nil {
 			s.logger.Fatal("Failed to update guild message in db", zap.Error(err))
 		}
