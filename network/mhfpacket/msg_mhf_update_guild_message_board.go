@@ -25,8 +25,10 @@ func (m *MsgMhfUpdateGuildMessageBoard) Opcode() network.PacketID {
 func (m *MsgMhfUpdateGuildMessageBoard) Parse(bf *byteframe.ByteFrame, ctx *clientctx.ClientContext) error {
   m.AckHandle = bf.ReadUint32()
   m.MessageOp = bf.ReadUint32()
-  m.Request = bf.DataFromCurrent()
-  bf.Seek(int64(len(bf.Data()) - 2), io.SeekStart)
+  if m.MessageOp != 5 {
+    m.Request = bf.DataFromCurrent()
+    bf.Seek(int64(len(bf.Data()) - 2), io.SeekStart)
+  }
 	return nil
 }
 

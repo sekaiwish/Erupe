@@ -1659,10 +1659,31 @@ func handleMsgMhfUpdateGuildMessageBoard(s *Session, p mhfpacket.MHFPacket) {
 					}
 				}
 				likedBy = strings.Join(likedBySlice, ",")
-				fmt.Println(likedBy)
 				_, err := s.server.db.Exec("UPDATE guild_posts SET likes = likes - 1, liked_by = $1 WHERE post_type = $2 AND created_at = $3 AND guild_id = $4", likedBy, int(postType), int(timestamp), guild.ID)
 				if err != nil {
 					s.logger.Fatal("Failed to unlike guild message in db", zap.Error(err))
+				}
+			}
+		}
+	case 5: // Check for new messages
+		var timeChecked int
+		var newPosts int
+		err := s.server.db.QueryRow("SELECT guild_post_checked FROM characters WHERE id = $1", s.charID).Scan(&timeChecked)
+		if err != nil {
+			s.logger.Fatal("Failed to get last guild post check timestamp from db", zap.Error(err))
+		} else {
+			_, err = s.server.db.Exec("UPDATE characters SET guild_post_checked = $1 WHERE id = $2", time.Now().Unix(), s.charID)
+			if err != nil {
+				s.logger.Fatal("Failed to update guild post check timestamp in db", zap.Error(err))
+			} else {
+				err = s.server.db.QueryRow("SELECT COUNT(*) FROM guild_posts WHERE guild_id = $1 AND created_at > $2", guild.ID, timeChecked).Scan(&newPosts)
+				if err != nil {
+					s.logger.Fatal("Failed to check for new guild posts in db", zap.Error(err))
+				} else {
+					if newPosts > 0 {
+						doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x01})
+						return
+					}
 				}
 			}
 		}

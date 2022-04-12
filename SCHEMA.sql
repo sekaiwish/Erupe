@@ -1,5 +1,8 @@
 BEGIN;
 
+ALTER TABLE characters
+    ADD COLUMN guild_post_checked int NOT NULL DEFAULT CAST(EXTRACT(epoch FROM now()) AS int);
+
 ALTER TABLE guilds
     ADD COLUMN item_box bytea;
 
