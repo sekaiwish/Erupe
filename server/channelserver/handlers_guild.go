@@ -1525,8 +1525,8 @@ func handleMsgMhfGetGuildWeeklyBonusActiveCount(s *Session, p mhfpacket.MHFPacke
 
 func handleMsgMhfGuildHuntdata(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfGuildHuntdata)
-	data := []byte{0x01, 0xFE}
-	doAckBufSucceed(s, pkt.AckHandle, data)
+	// TODO: translate pkt.MessageOp == 2
+	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 }
 
 func handleMsgMhfEnumerateGuildMessageBoard(s *Session, p mhfpacket.MHFPacket) {
