@@ -2,7 +2,6 @@ package mhfpacket
 
 import (
  "errors"
- "io"
 
  	"github.com/Solenataris/Erupe/network/clientctx"
 	"github.com/Solenataris/Erupe/network"
@@ -16,7 +15,7 @@ type MsgMhfGuildHuntdata struct{
   // op 1: check chest (uint32 guildid)
   // op 2: submit data (no idea what format)
 	MessageOp uint8
-  Request []byte
+  GuildID uint32
 }
 
 // Opcode returns the ID associated with this packet type.
@@ -29,10 +28,7 @@ func (m *MsgMhfGuildHuntdata) Parse(bf *byteframe.ByteFrame, ctx *clientctx.Clie
 	m.AckHandle = bf.ReadUint32()
 	m.MessageOp = bf.ReadUint8()
   if m.MessageOp == 1 {
-    m.Request = bf.ReadBytes(4)
-  } else if m.MessageOp == 2 {
-    m.Request = bf.DataFromCurrent()
-    bf.Seek(int64(len(bf.Data()) - 2), io.SeekStart)
+    m.GuildID = bf.ReadUint32()
   }
 	return nil
 }
