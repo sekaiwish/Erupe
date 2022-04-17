@@ -2,7 +2,6 @@ package mhfpacket
 
 import (
  "errors"
- "io"
 
  	"github.com/Solenataris/Erupe/network/clientctx"
 	"github.com/Solenataris/Erupe/network"
@@ -27,7 +26,7 @@ func (m *MsgMhfUpdateGuildMessageBoard) Parse(bf *byteframe.ByteFrame, ctx *clie
   m.MessageOp = bf.ReadUint32()
   if m.MessageOp != 5 {
     m.Request = bf.DataFromCurrent()
-    bf.Seek(int64(len(bf.Data()) - 2), io.SeekStart)
+    bf.Seek(int64(len(bf.Data()) - 2), 0)
   }
 	return nil
 }
