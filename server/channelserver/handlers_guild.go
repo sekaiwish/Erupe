@@ -1080,25 +1080,121 @@ func handleMsgMhfEnumerateGuild(s *Session, p mhfpacket.MHFPacket) {
 
 	var guilds []*Guild
 	var err error
+	bf := byteframe.NewByteFrameFromBytes(pkt.RawDataPayload)
+
+	/* Guild search types
+	1: guild name
+	2: leader name
+	3: leader id => 3bytes, uint32
+	4: number members => uint16 1 = most, 0 = few
+	5: order registered => uint16 0 = new, 1 = old
+	6: guild rank => uint16 1 = high, 0 = low
+	7: motto => need to test each
+	8: newest?
+	   Alliance search types
+	9: alliance name
+	10: leader name
+	11: id
+	12: number allies
+	13: order registered
+	*/
 
 	switch pkt.Type {
-	case mhfpacket.ENUMERATE_GUILD_TYPE_NAME:
-		// I have no idea if is really little endian, but it seems too weird to have a random static
-		// 0x00 before the string
-		searchTermLength := binary.LittleEndian.Uint16(pkt.RawDataPayload[9:11])
-		searchTerm := pkt.RawDataPayload[11 : 11+searchTermLength]
-
-		var searchTermSafe string
-
-		searchTermSafe, err = s.clientContext.StrConv.Decode(bfutil.UpToNull(searchTerm))
-
-		if err != nil {
-			panic(err)
-		}
-
-		guilds, err = FindGuildsByName(s, searchTermSafe)
-	default:
-		panic(fmt.Sprintf("no handler for guild search type '%d'", pkt.Type))
+		case mhfpacket.ENUMERATE_GUILD_TYPE_GUILD_NAME:
+			bf.ReadBytes(8)
+			searchTermLength := bf.ReadUint16()
+			bf.ReadBytes(1)
+			searchTerm := bf.ReadBytes(uint(searchTermLength))
+			var searchTermSafe string
+			searchTermSafe, err = s.clientContext.StrConv.Decode(bfutil.UpToNull(searchTerm))
+			if err != nil {
+				panic(err)
+			}
+			guilds, err = FindGuildsByName(s, searchTermSafe)
+		case mhfpacket.ENUMERATE_GUILD_TYPE_LEADER_NAME:
+			bf.ReadBytes(8)
+			searchTermLength := bf.ReadUint16()
+			bf.ReadBytes(1)
+			searchTerm := bf.ReadBytes(uint(searchTermLength))
+			var searchTermSafe string
+			searchTermSafe, err = s.clientContext.StrConv.Decode(bfutil.UpToNull(searchTerm))
+			if err != nil {
+				panic(err)
+			}
+			rows, err := s.server.db.Queryx(fmt.Sprintf(`%s WHERE lc.name ILIKE $1`, guildInfoSelectQuery), searchTermSafe)
+			if err != nil {
+				s.logger.Error("Failed to retrieve guild by leader name", zap.Error(err))
+			} else {
+				for rows.Next() {
+					guild, _ := buildGuildObjectFromDbResult(rows, err, s)
+					guilds = append(guilds, guild)
+				}
+			}
+		case mhfpacket.ENUMERATE_GUILD_TYPE_LEADER_ID:
+			bf.ReadBytes(3)
+			ID := bf.ReadUint32()
+			rows, err := s.server.db.Queryx(fmt.Sprintf(`%s WHERE leader_id = $1`, guildInfoSelectQuery), ID)
+			if err != nil {
+				s.logger.Error("Failed to retrieve guild by leader ID", zap.Error(err))
+			} else {
+				for rows.Next() {
+					guild, _ := buildGuildObjectFromDbResult(rows, err, s)
+					guilds = append(guilds, guild)
+				}
+			}
+		case mhfpacket.ENUMERATE_GUILD_TYPE_ORDER_MEMBERS:
+			sorting := bf.ReadUint16()
+			var rows *sqlx.Rows
+			var err error
+			if sorting == 1 {
+				rows, err = s.server.db.Queryx(fmt.Sprintf(`%s ORDER BY member_count DESC`, guildInfoSelectQuery))
+			} else {
+				rows, err = s.server.db.Queryx(fmt.Sprintf(`%s ORDER BY member_count ASC`, guildInfoSelectQuery))
+			}
+			if err != nil {
+				s.logger.Error("Failed to retrieve guild by member count", zap.Error(err))
+			} else {
+				for rows.Next() {
+					guild, _ := buildGuildObjectFromDbResult(rows, err, s)
+					guilds = append(guilds, guild)
+				}
+			}
+		case mhfpacket.ENUMERATE_GUILD_TYPE_ORDER_REGISTRATION:
+			sorting := bf.ReadUint16()
+			var rows *sqlx.Rows
+			var err error
+			if sorting == 1 {
+				rows, err = s.server.db.Queryx(fmt.Sprintf(`%s ORDER BY id DESC`, guildInfoSelectQuery))
+			} else {
+				rows, err = s.server.db.Queryx(fmt.Sprintf(`%s ORDER BY id ASC`, guildInfoSelectQuery))
+			}
+			if err != nil {
+				s.logger.Error("Failed to retrieve guild by registration date", zap.Error(err))
+			} else {
+				for rows.Next() {
+					guild, _ := buildGuildObjectFromDbResult(rows, err, s)
+					guilds = append(guilds, guild)
+				}
+			}
+		case mhfpacket.ENUMERATE_GUILD_TYPE_ORDER_RANK:
+			sorting := bf.ReadUint16()
+			var rows *sqlx.Rows
+			var err error
+			if sorting == 1 {
+				rows, err = s.server.db.Queryx(fmt.Sprintf(`%s ORDER BY guild_hall DESC`, guildInfoSelectQuery))
+			} else {
+				rows, err = s.server.db.Queryx(fmt.Sprintf(`%s ORDER BY guild_hall ASC`, guildInfoSelectQuery))
+			}
+			if err != nil {
+				s.logger.Error("Failed to retrieve guild by rank", zap.Error(err))
+			} else {
+				for rows.Next() {
+					guild, _ := buildGuildObjectFromDbResult(rows, err, s)
+					guilds = append(guilds, guild)
+				}
+			}
+		default:
+			panic(fmt.Sprintf("no handler for guild search type '%d'", pkt.Type))
 	}
 
 	if err != nil || guilds == nil {
@@ -1106,7 +1202,7 @@ func handleMsgMhfEnumerateGuild(s *Session, p mhfpacket.MHFPacket) {
 		return
 	}
 
-	bf := byteframe.NewByteFrame()
+	bf = byteframe.NewByteFrame()
 	bf.WriteUint16(uint16(len(guilds)))
 
 	for _, guild := range guilds {
@@ -1119,7 +1215,7 @@ func handleMsgMhfEnumerateGuild(s *Session, p mhfpacket.MHFPacket) {
 		bf.WriteUint16(guild.MemberCount)
 		bf.WriteUint8(0x00)  // Unk
 		bf.WriteUint8(0x00)  // Unk
-		bf.WriteUint16(0x00) // Rank
+		bf.WriteUint16(guild.GuildHallType)
 		bf.WriteUint32(uint32(guild.CreatedAt.Unix()))
 		bf.WriteUint8(uint8(len(guildName)))
 		bf.WriteBytes(guildName)
