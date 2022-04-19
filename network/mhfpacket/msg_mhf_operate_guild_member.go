@@ -1,7 +1,7 @@
 package mhfpacket
 
-import ( 
- "errors" 
+import (
+ "errors"
 
  	"github.com/Solenataris/Erupe/network/clientctx"
 	"github.com/Solenataris/Erupe/network"
@@ -22,7 +22,8 @@ type MsgMhfOperateGuildMember struct {
 	AckHandle uint32
 	GuildID   uint32
 	CharID    uint32
-	Action    uint8
+	Action    OperateGuildMemberAction
+  Unk0 []byte
 }
 
 // Opcode returns the ID associated with this packet type.
@@ -35,8 +36,8 @@ func (m *MsgMhfOperateGuildMember) Parse(bf *byteframe.ByteFrame, ctx *clientctx
 	m.AckHandle = bf.ReadUint32()
 	m.GuildID = bf.ReadUint32()
 	m.CharID = bf.ReadUint32()
-	m.Action = bf.ReadUint8()
-
+	m.Action = OperateGuildMemberAction(bf.ReadUint8())
+  m.Unk0 = bf.ReadBytes(3)
 	return nil
 }
 
