@@ -52,7 +52,7 @@ type Guild struct {
 	RP             uint32         `db:"rp"`
 	Comment        string         `db:"comment"`
 	FestivalColour FestivalColour `db:"festival_colour"`
-	GuildHallType  uint16         `db:"guild_hall"`
+	Rank           uint16         `db:"rank"`
 	Icon           *GuildIcon     `db:"icon"`
 
 	GuildLeader
@@ -101,24 +101,32 @@ func (gi *GuildIcon) Value() (valuer driver.Value, err error) {
 }
 
 const guildInfoSelectQuery = `
-SELECT g.id,
-       g.name,
-       g.rp,
-	   g.main_motto,
-	   g.sub_motto,
-       created_at,
-       leader_id,
-       lc.name as leader_name,
-       comment,
-       festival_colour,
-	   guild_hall,
-       icon,
-       (
-           SELECT count(1) FROM guild_characters gc WHERE gc.guild_id = g.id
-       )             AS member_count
-FROM guilds g
-         JOIN guild_characters lgc ON lgc.character_id = leader_id
-         JOIN characters lc on leader_id = lc.id
+SELECT
+	g.id,
+	g.name,
+	g.rp,
+	g.main_motto,
+	g.sub_motto,
+	created_at,
+	leader_id,
+	lc.name as leader_name,
+	comment,
+	festival_colour,
+	CASE
+		WHEN g.rp <= 48 THEN g.rp/24
+		WHEN g.rp <= 288 THEN g.rp/48+1
+		WHEN g.rp <= 504 THEN g.rp/72+3
+		WHEN g.rp <= 1080 THEN (g.rp-24)/96+5
+		WHEN g.rp < 1200 THEN 16
+		ELSE 17
+	END rank,
+	icon,
+	(
+		SELECT count(1) FROM guild_characters gc WHERE gc.guild_id = g.id
+	) AS member_count
+	FROM guilds g
+	JOIN guild_characters lgc ON lgc.character_id = leader_id
+	JOIN characters lc on leader_id = lc.id
 `
 
 func (guild *Guild) Save(s *Session) error {
@@ -421,8 +429,8 @@ func CreateGuild(s *Session, guildName string) (int32, error) {
 		// this is a workaround for now.
 		// "INSERT INTO guilds (name, leader_id) VALUES ($1, $2) RETURNING id",
 		// guildName, s.charID,
-		"INSERT INTO guilds (name, leader_id, rp, guild_hall) VALUES ($1, $2, $3, $4) RETURNING id",
-		guildName, s.charID, 48, 17,
+		"INSERT INTO guilds (name, leader_id, rp) VALUES ($1, $2, $3) RETURNING id",
+		guildName, s.charID, 1200,
 	)
 
 	if err != nil {
@@ -746,7 +754,6 @@ func handleAvoidLeadershipUpdate(s *Session, pkt *mhfpacket.MsgMhfOperateGuild, 
 func handleOperateGuildActionDonate(s *Session, guild *Guild, pkt *mhfpacket.MsgMhfOperateGuild, bf *byteframe.ByteFrame) error {
 
 	var rpDB uint16
-	var guildHallLvl uint16
 
 	rp := binary.BigEndian.Uint16(pkt.UnkData[3:5])
 
@@ -811,20 +818,6 @@ func handleOperateGuildActionDonate(s *Session, guild *Guild, pkt *mhfpacket.Msg
 
 	if errSelectSQL != nil {
 		s.logger.Fatal("Failed to get rp from db", zap.Error(errSelectSQL))
-	}
-
-	guildHallLvl = rpDB / 70
-
-	if guildHallLvl >= 17 {
-		guildHallLvl = 17
-	}
-	fmt.Printf("\n\nrpDB = %d\n", rpDB)
-	fmt.Printf("guildHallLvl = %d\n", guildHallLvl)
-
-	_, errUpdateSQL := s.server.db.Exec("UPDATE guilds SET guild_hall=$1 WHERE id=$2", guildHallLvl, guild.ID)
-	if errUpdateSQL == nil {
-		s.logger.Error("failed to donate RP to guild", zap.Error(errUpdateSQL), zap.Uint32("guildID", guild.ID))
-		return err
 	}
 
 	return nil
@@ -930,11 +923,7 @@ func handleMsgMhfInfoGuild(s *Session, p mhfpacket.MHFPacket) {
 
 		bf.WriteUint32(guild.ID)
 		bf.WriteUint32(guild.LeaderCharID)
-		// Unk 0x09 = Guild Hall available, maybe guild hall type?
-		// Guild hall available on at least
-		// 0x09 0x08 0x02
-		// Should just be outright guild level for guild hall features, 17 gives everything
-		bf.WriteUint16(guild.GuildHallType)
+		bf.WriteUint16(guild.Rank)
 		bf.WriteUint16(guild.MemberCount)
 
 		bf.WriteUint8(guild.MainMotto)
@@ -1181,9 +1170,9 @@ func handleMsgMhfEnumerateGuild(s *Session, p mhfpacket.MHFPacket) {
 			var rows *sqlx.Rows
 			var err error
 			if sorting == 1 {
-				rows, err = s.server.db.Queryx(fmt.Sprintf(`%s ORDER BY guild_hall DESC`, guildInfoSelectQuery))
+				rows, err = s.server.db.Queryx(fmt.Sprintf(`%s ORDER BY rp DESC`, guildInfoSelectQuery))
 			} else {
-				rows, err = s.server.db.Queryx(fmt.Sprintf(`%s ORDER BY guild_hall ASC`, guildInfoSelectQuery))
+				rows, err = s.server.db.Queryx(fmt.Sprintf(`%s ORDER BY rp ASC`, guildInfoSelectQuery))
 			}
 			if err != nil {
 				s.logger.Error("Failed to retrieve guild by rank", zap.Error(err))
@@ -1215,7 +1204,7 @@ func handleMsgMhfEnumerateGuild(s *Session, p mhfpacket.MHFPacket) {
 		bf.WriteUint16(guild.MemberCount)
 		bf.WriteUint8(0x00)  // Unk
 		bf.WriteUint8(0x00)  // Unk
-		bf.WriteUint16(guild.GuildHallType)
+		bf.WriteUint16(guild.Rank)
 		bf.WriteUint32(uint32(guild.CreatedAt.Unix()))
 		bf.WriteUint8(uint8(len(guildName)))
 		bf.WriteBytes(guildName)
