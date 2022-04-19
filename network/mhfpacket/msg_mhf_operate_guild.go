@@ -1,7 +1,7 @@
 package mhfpacket
 
-import ( 
- "errors" 
+import (
+ "errors"
 
  	"github.com/Solenataris/Erupe/network/clientctx"
 	"github.com/Solenataris/Erupe/network"
@@ -11,14 +11,25 @@ import (
 type OperateGuildAction uint8
 
 const (
-	OPERATE_GUILD_ACTION_DISBAND             = 0x01
-	OPERATE_GUILD_ACTION_APPLY               = 0x02
-	OPERATE_GUILD_ACTION_LEAVE               = 0x03
-	OPERATE_GUILD_SET_AVOID_LEADERSHIP_TRUE  = 0x07
-	OPERATE_GUILD_SET_AVOID_LEADERSHIP_FALSE = 0x08
-	OPERATE_GUILD_ACTION_UPDATE_COMMENT      = 0x09
-	OPERATE_GUILD_ACTION_DONATE              = 0x0a
-	OPERATE_GUILD_ACTION_UPDATE_MOTTO        = 0x0b
+  _ = iota
+	OPERATE_GUILD_ACTION_DISBAND
+	OPERATE_GUILD_ACTION_APPLY
+	OPERATE_GUILD_ACTION_LEAVE
+  OPERATE_GUILD_UNK
+  OPERATE_GUILD_SET_APPLICATION_DENY
+  OPERATE_GUILD_SET_APPLICATION_ALLOW
+	OPERATE_GUILD_SET_AVOID_LEADERSHIP_TRUE
+	OPERATE_GUILD_SET_AVOID_LEADERSHIP_FALSE
+	OPERATE_GUILD_ACTION_UPDATE_COMMENT
+	OPERATE_GUILD_ACTION_DONATE
+	OPERATE_GUILD_ACTION_UPDATE_MOTTO
+  OPERATE_GUILD_ACTION_RENAME_PUGI_1
+  OPERATE_GUILD_ACTION_RENAME_PUGI_2
+  OPERATE_GUILD_ACTION_RENAME_PUGI_3
+  OPERATE_GUILD_ACTION_CHANGE_PUGI_1
+  OPERATE_GUILD_ACTION_CHANGE_PUGI_2
+  OPERATE_GUILD_ACTION_CHANGE_PUGI_3
+  // probably more for crafting pugi clothes
 )
 
 // MsgMhfOperateGuild represents the MSG_MHF_OPERATE_GUILD
@@ -40,7 +51,7 @@ func (m *MsgMhfOperateGuild) Parse(bf *byteframe.ByteFrame, ctx *clientctx.Clien
 	m.GuildID = bf.ReadUint32()
 	m.Action = OperateGuildAction(bf.ReadUint8())
 	m.UnkData = bf.DataFromCurrent()
-
+  bf.Seek(int64(len(bf.Data()) - 2), 0)
 	return nil
 }
 
