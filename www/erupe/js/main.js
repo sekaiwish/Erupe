@@ -1,5 +1,6 @@
-var DoOnceActive = true;
+var DoOnceActive;
 var login_loader;
+var uids;
 
 function createWinsockAlert(message) {
 	var tmpDiv = $('<div/>')
@@ -40,6 +41,8 @@ function scrollToBottom() {
 }
 
 function switchLogin() {
+	$('#main_parent').empty();
+	$('#main_parent').append(loginHtml);
 	createNormalAlert("Enter Erupe ID and Password, then press [Log in]");
 	login_loader = document.getElementById("login_load");
 	var usernameSaved = localStorage.getItem('username');
@@ -60,6 +63,7 @@ function switchLogin() {
 			localStorage.removeItem('username');
 			localStorage.removeItem('password');
 			localStorage.removeItem('saveLogin');
+			localStorage.removeItem('lastUid');
 		}
 	}
 	$("#saveLoginText").on("click", function(e) {
@@ -92,7 +96,7 @@ function switchLogin() {
 
 $(function() {
   $("#main_titlebar").on("click", function(e) {
-      window.external.beginDrag(true);
+    window.external.beginDrag(true);
   });
   $("#main_exit").on("click", function(e) {
     window.external.closeWindow();
@@ -116,6 +120,7 @@ $(function() {
 });
 
 function switchCharsel() {
+	DoOnceActive = true;
 	$('#main_parent').empty();
 	$('#main_parent').append(charselHtml);
 	try {
@@ -132,6 +137,7 @@ function switchCharsel() {
 		createErrorAlert("Error parsing character info XML!" + e);
 	}
 
+	uids = new Array();
 	try {
 		$($xml).find("Character").each(function () {
 		  createCharListItem(
@@ -148,6 +154,15 @@ function switchCharsel() {
 		createErrorAlert("Error searching character info xml!" + e);
 	}
 
+	let credsSaved = localStorage.getItem('saveLogin');
+	if (credsSaved != "null" && credsSaved == "true") {
+		let lastUid = localStorage.getItem('lastUid');
+		if (lastUid != "null" && jQuery.inArray(lastUid, uids) !== -1) {
+			$(".charsel_char.active").removeClass("active");
+			$(".charsel_char[uid="+lastUid+"]").addClass("active");
+		}
+	}
+
 	$(".charsel_char").click(function () {
 		if (!$(this).hasClass("active")) {
 		  $(".charsel_char.active").removeClass("active");
@@ -156,14 +171,31 @@ function switchCharsel() {
 	});
 
   $(function() {
-    var selectedUid = $(".charsel_char.active").attr("uid");
+		$("#charsel_char_list_up").on("click", function(e) {
+			let selectedUid = $(".charsel_char.active").attr("uid");
+			let index = uids.indexOf(selectedUid);
+			index = index - 1;
+			if (index < 0) {
+				index = uids.length - 1;
+			}
+			$(".charsel_char.active").removeClass("active");
+			$(".charsel_char[uid="+uids[index]+"]").addClass("active");
+		});
+		$("#charsel_char_list_down").on("click", function(e) {
+			let selectedUid = $(".charsel_char.active").attr("uid");
+			let index = uids.indexOf(selectedUid);
+			index = index + 1;
+			if (index == uids.length) {
+				index = 0;
+			}
+			$(".charsel_char.active").removeClass("active");
+			$(".charsel_char[uid="+uids[index]+"]").addClass("active");
+		});
   	$("#charsel_new_char").on("click", function(e) {
   		alert("Not yet implemented");
   	});
   	$("#charsel_logout").on("click", function(e) {
-			$('#main_parent').empty();
 			createErrorAlert("Disconnected.");
-			$('#main_parent').append(loginHtml);
 			switchLogin();
   	});
   });
@@ -178,6 +210,10 @@ function switchCharsel() {
     var selectedUid = $(".charsel_char.active").attr("uid");
     try {
       window.external.selectCharacter(selectedUid, selectedUid)
+			let credsSaved = localStorage.getItem('saveLogin');
+			if (credsSaved != "null" && credsSaved == "true") {
+				localStorage.setItem('lastUid', selectedUid);
+			}
     } catch (e) {
     	createErrorAlert("Error on selectCharacter: " + e + ".");
       try {
@@ -206,6 +242,7 @@ function saveAccount() {
 		localStorage.removeItem('username');
 		localStorage.removeItem('password');
 		localStorage.removeItem('saveLogin');
+		localStorage.removeItem('lastUid');
 	}
 }
 
@@ -225,7 +262,7 @@ function checkAuthResult() {
   }
 }
 
-function playKey(e) {
+function playKey() {
   var audio = new Audio("./audio/sys_cursor.mp3");
   audio.play();
 }
@@ -326,10 +363,11 @@ function createCharListItem(name, uid, weapon, HR, GR, lastLogin, sex) {
 	.append($('<div id="gr_lvl"/>').text('GR' + GR))
 	.append($('<div id="sex"/>').text(sex))
 	.append($('<div id="uid"/>').text('ID: ' + uid))
-	.append($('<div id="lastlogin"/>').text('Last Login: ' + lastLoginString));
+	.append($('<div id="lastlogin"/>').text('Created On: ' + lastLoginString));
 	topDiv.append(topLine);
 	topDiv.append(bottomLine);
 	$("#charsel_list").append(topDiv);
+	uids.push(uid);
 }
 
 function CheckMessage(message){
@@ -403,11 +441,11 @@ function doLauncherInitalize() {
 					<form id='login_form'>\
 						<h5 class='mb-1' style='font-size: 16px;color: White; position: relative; left: 5px;' ><b>Erupe ID</b></h5>\
 						<div class='form-group'>\
-							<input type='text' class='form-control' id='username' placeholder='Username' onkeyup='playKey(event);' onclick='CUE_Selected()' onmouseover='CUE_Cursor()' value='' autocomplete='on'>\
+							<input type='text' class='form-control' id='username' placeholder='Username' onkeyup='playKey();' onclick='CUE_Selected()' onmouseover='CUE_Cursor()' value='' autocomplete='on'>\
 						</div>\
 						<h5 class='mb-1' style='font-size: 16px;color: White; position: relative; left: 5px;' ><b>Password</b></h5>\
 						<div class='form-group'>\
-							<input type='password' class='form-control' id='password' placeholder='Password' onkeyup='playKey(event);' onclick='CUE_Selected()' onmouseover='CUE_Cursor()' value='' autocomplete='on'>\
+							<input type='password' class='form-control' id='password' placeholder='Password' onkeyup='playKey();' onclick='CUE_Selected()' onmouseover='CUE_Cursor()' value='' autocomplete='on'>\
 						</div>\
 						<h5 class='mb-1' style='font-size: 16px;color: White; position: relative; left: 5px;' ><b>Server Selection</b></h5>\
 						<div class='form-group'>\
@@ -425,7 +463,7 @@ function doLauncherInitalize() {
 	</div>\
 	<div id='login_load' style='display: none;'>\
 		<img src='resources/load.gif' style='width: 32px;position: absolute;left: 190px;top: 125px;'>\
-	</div>"
+	</div>";
 	charselHtml = "<div style='height: 30px;'></div>\
 	<div class='container' style='height: 250px;'>\
 		<div class='row'>\
@@ -442,8 +480,7 @@ function doLauncherInitalize() {
 		</div>\
 		<button id='charsel_char_list_up' class='btn btn-primary' onclick='CUE_Selected();' onmouseover='CUE_Cursor()'></button>\
 		<button id='charsel_char_list_down' class='btn btn-primary' onclick='CUE_Selected();' onmouseover='CUE_Cursor()'></button>\
-	</div>"
-	$('#main_parent').append(loginHtml);
+	</div>";
 }
 
 

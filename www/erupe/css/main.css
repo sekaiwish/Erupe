@@ -133,7 +133,7 @@ html, body {
     left: 140px;
 }
 
-#login_submit{
+#login_submit {
   background: url(../resources/bt_launch.png) no-repeat scroll 0 0 transparent;
   color: rgba(255,255,255,1);
   cursor: pointer;
@@ -145,7 +145,7 @@ html, body {
   width: 308px;
 }
 
-#login_submit:hover{
+#login_submit:hover {
   background: url(../resources/bt_launch_hover.png) no-repeat scroll 0 0 transparent;
   color: rgba(255,255,255,1);
   cursor: pointer;
@@ -157,7 +157,7 @@ html, body {
   width: 308px;
 }
 
-#login_save_login{
+#login_save_login {
 	font-size: 15px!important;
   width: 150px!important;
   height: 22px!important;
@@ -167,9 +167,10 @@ html, body {
 	top: 3px!important;
   cursor: pointer!important;
 	text-shadow: #000 2px 2px!important;
+  -ms-user-select: none;
 }
 
-#login_save_login:hover{
+#login_save_login:hover {
   color: rgba(255, 255, 255, 1);
 }
 
@@ -282,12 +283,17 @@ html, body {
 }
 
 .charsel_char {
+  position: fixed;
   background-image: url(../resources/bt_charsel.jpg);
   overflow: hidden!important;
   background-color: rgba(0,0,0,0);
   height: 100px;
   width: 398px;
   margin-left: 61px;
+}
+
+.charsel_char.active {
+  z-index: 100;
 }
 
 .form-control {
@@ -371,7 +377,7 @@ input[readonly] {
 #charsel_launch {
   background: url(../resources/bt_launch.png) no-repeat scroll 0 0 transparent;
   position: relative;
-  top: 10px;
+  top: 110px;
   left: 102px;
   color: rgba(200,200,200,1);
   cursor: pointer;
@@ -383,7 +389,7 @@ input[readonly] {
 #charsel_launch:hover {
   background: url(../resources/bt_launch_hover.png) no-repeat scroll 0 0 transparent;
   position: relative;
-  top: 10px;
+  top: 110px;
   left: 102px;
   color: rgba(255,255,255,1);
   cursor: pointer;
@@ -396,7 +402,7 @@ input[readonly] {
   background: url(../resources/bt_sub.png) no-repeat scroll 0 0 transparent;
   background-size: 167px 33px;
   position: relative;
-  top: 6px;
+  top: 106px;
   right: 81px;
   color: rgba(200,200,200,1);
   cursor: pointer;
@@ -409,7 +415,7 @@ input[readonly] {
   background: url(../resources/bt_sub_hover.png) no-repeat scroll 0 0 transparent;
   background-size: 167px 33px;
   position: relative;
-  top: 6px;
+  top: 106px;
   right: 81px;
   color: rgba(255,255,255,1);
   cursor: pointer;
@@ -422,7 +428,7 @@ input[readonly] {
   background: url(../resources/bt_sub.png) no-repeat scroll 0 0 transparent;
   background-size: 167px 33px;
   position: relative;
-  top: 6px;
+  top: 106px;
   left: 262px;
   color: rgba(200,200,200,1);
   cursor: pointer;
@@ -435,7 +441,7 @@ input[readonly] {
   background: url(../resources/bt_sub_hover.png) no-repeat scroll 0 0 transparent;
   background-size: 167px 33px;
   position: relative;
-  top: 6px;
+  top: 106px;
   left: 262px;
   color: rgba(255,255,255,1);
   cursor: pointer;
@@ -498,17 +504,12 @@ input[readonly] {
 }
 
 #main_box_alert{
-	width: 100%;
-	height: 100%;
-	overflow: auto;
-}
-
-#main_box_alert{
   width: 414px;
   height: 95px;
   position: relative;
   top: 3px;
   left: 3px;
+  overflow: hidden;
 }
 
 .alert {
