@@ -81,6 +81,13 @@ $(function() {
 			localStorage.removeItem('saveLogin');
 		}
 	}
+	$("#saveLoginText").on("click", function(e) {
+		if ($("#saveLogin").prop("checked")) {
+			$("#saveLogin").prop("checked", false);
+		} else {
+			$("#saveLogin").prop("checked", true);
+		}
+	});
   $("#login_form").submit(function(e) {
 		e.preventDefault();
     username = $("#username").val();
@@ -402,7 +409,7 @@ function doLauncherInitalize() {
 					</form>\
 					<div id='login_save_login' >\
 						<input type='checkbox' id='saveLogin' name='saveLogin' style='position: relative; left: 5px; cursor: pointer;'>\
-						<label for='scales' style='position: relative; left: 5px; bottom: 1.58px; cursor: pointer;'>Save Login Details</label>\
+						<label for='scales' id='saveLoginText' style='position: relative; left: 5px; bottom: 1.58px; cursor: pointer;'>Save Login Details</label>\
 					</div>\
 				</div>\
 			</div>\
