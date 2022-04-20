@@ -212,7 +212,7 @@ function switchCharsel() {
 			$(".charsel_char[uid="+uids[index]+"]").addClass("active");
 		});
   	$("#charsel_new_char").on("click", function(e) {
-  		alert("Not yet implemented");
+  		createNormalAlert("Click Log Out, then add a '+' to the end of your username to create a new character.");
   	});
   	$("#charsel_logout").on("click", function(e) {
 			createErrorAlert("Disconnected.");
