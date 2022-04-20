@@ -39,28 +39,9 @@ function scrollToBottom() {
 		messages.scrollTop = messages.scrollHeight;
 }
 
-$(function() {
-  $("#main_titlebar").on("click", function(e) {
-      window.external.beginDrag(true);
-  });
-  $("#main_exit").on("click", function(e) {
-    window.external.closeWindow();
-  });
-	$("#main_reduce").on("click", function(e) {
-    window.external.minimizeWindow();
-	});
-  $(window).on("message onmessage", function(e) {
-    var data = e.originalEvent.data;
-		CheckMessage(data);
-  });
-	$("#main_config_button").click(function(){
-    try {
-      window.external.openMhlConfig();
-    } catch(e) {
-      createErrorAlert("Error on openMhlConfig: " + e + ".");
-    }
-  });
-  doLauncherInitalize();
+function switchLogin() {
+	createNormalAlert("Enter Erupe ID and Password, then press [Log in]");
+	login_loader = document.getElementById("login_load");
 	var usernameSaved = localStorage.getItem('username');
 	var passwordSaved = localStorage.getItem('password');
 	var checkboxSaved = localStorage.getItem('saveLogin');
@@ -107,6 +88,31 @@ $(function() {
 			checkAuthResult();
 		}
   });
+}
+
+$(function() {
+  $("#main_titlebar").on("click", function(e) {
+      window.external.beginDrag(true);
+  });
+  $("#main_exit").on("click", function(e) {
+    window.external.closeWindow();
+  });
+	$("#main_reduce").on("click", function(e) {
+    window.external.minimizeWindow();
+	});
+  $(window).on("message onmessage", function(e) {
+    var data = e.originalEvent.data;
+		CheckMessage(data);
+  });
+	$("#main_config_button").click(function(){
+    try {
+      window.external.openMhlConfig();
+    } catch(e) {
+      createErrorAlert("Error on openMhlConfig: " + e + ".");
+    }
+  });
+  doLauncherInitalize();
+	switchLogin();
 });
 
 function switchCharsel() {
@@ -154,8 +160,11 @@ function switchCharsel() {
   	$("#charsel_new_char").on("click", function(e) {
   		alert("Not yet implemented");
   	});
-  	$("#charsel_delete_char").on("click", function(e) {
-  		alert("Not yet implemented");
+  	$("#charsel_logout").on("click", function(e) {
+			$('#main_parent').empty();
+			createErrorAlert("Disconnected.");
+			$('#main_parent').append(loginHtml);
+			switchLogin();
   	});
   });
 
@@ -343,7 +352,6 @@ function CheckMessage(message){
 
 function doLauncherInitalize() {
 	createWinsockAlert("Winsock Ver. [2.2]");
-	createNormalAlert("Enter Erupe ID and Password, then press [Log in]");
   try {
     window.external.getMhfMutexNumber();
   } catch(e) {
@@ -427,7 +435,7 @@ function doLauncherInitalize() {
 		</div>\
 		<div class='row' style='position: relative; top: 30px;'>\
 			<div class='col-12' style='height: 100%;'>\
-				<button id='charsel_delete_char' class='btn btn-primary' onclick='CUE_Selected();' onmouseover='CUE_Cursor()'>Delete</button>\
+				<button id='charsel_logout' class='btn btn-primary' onclick='CUE_Selected();' onmouseover='CUE_Cursor()'>Log Out</button>\
 				<button id='charsel_new_char' class='btn btn-primary' onclick='CUE_Selected()' onmouseover='CUE_Cursor()'>Add New Character</button>\
 				<button id='charsel_launch' class='btn btn-primary' onclick='CUE_Starting();' onmouseover='CUE_Cursor()'>Launch</button>\
 			</div>\
@@ -436,7 +444,6 @@ function doLauncherInitalize() {
 		<button id='charsel_char_list_down' class='btn btn-primary' onclick='CUE_Selected();' onmouseover='CUE_Cursor()'></button>\
 	</div>"
 	$('#main_parent').append(loginHtml);
-	login_loader = document.getElementById("login_load");
 }
 
 

@@ -418,7 +418,7 @@ input[readonly] {
   width: 167px;
 }
 
-#charsel_delete_char {
+#charsel_logout {
   background: url(../resources/bt_sub.png) no-repeat scroll 0 0 transparent;
   background-size: 167px 33px;
   position: relative;
@@ -431,7 +431,7 @@ input[readonly] {
   width: 167px;
 }
 
-#charsel_delete_char:hover{
+#charsel_logout:hover{
   background: url(../resources/bt_sub_hover.png) no-repeat scroll 0 0 transparent;
   background-size: 167px 33px;
   position: relative;
