@@ -14,88 +14,81 @@ function createCharListItem(name, uid, weapon, HR, GR, lastLogin, sex) {
 	const unixTimestamp = lastLogin;
 	const milliseconds = unixTimestamp * 1000;
 	const dateObject = new Date(milliseconds);
-	const humanDateFormat = dateObject.toLocaleString();
-	dateObject.toLocaleString("en-US", {weekday: "long"});
-	dateObject.toLocaleString("en-US", {month: "long"});
-	dateObject.toLocaleString("en-US", {day: "numeric"});
-	dateObject.toLocaleString("en-US", {year: "numeric"});
-	dateObject.toLocaleString("en-US", {timeZoneName: "short"});
+	const humanDateFormat = dateObject.toLocaleDateString("en-US");
 	lastLogin = humanDateFormat;
-	lastLogin = lastLogin.split(' ')[0];
 	if (sex == "M"){
 		sex = "♂";
-	}
-	else{
+	} else {
 		sex = "♀";
 	}
-	if (HR > 999){
+	if (HR > 999) {
 		HR = 999;
 	}
 	if (GR > 999){
-		GR = "999";
+		GR = 999;
 	}
 
 	if (weapon == "片手剣"){
 		weapon = "Sword & Shield";
-		icon = "./ressources/icons/SS.png";
+		icon = "./resources/icons/SS.png";
 	}
 	else if (weapon == "双剣"){
 		weapon = "Dual Swords";
-		icon = "./ressources/icons/DS.png";			
+		icon = "./resources/icons/DS.png";
 	}
 	else if (weapon == "大剣"){
 		weapon = "Great Sword";
-		icon = "./ressources/icons/GS.png";
+		icon = "./resources/icons/GS.png";
 	}
 	else if (weapon == "太刀"){
 		weapon = "Long Sword";
-		icon = "./ressources/icons/LS.png";
+		icon = "./resources/icons/LS.png";
 	}
 	else if (weapon == "ハンマー"){
 		weapon = "Hammer";
-		icon = "./ressources/icons/H.png";
+		icon = "./resources/icons/H.png";
 	}
 	else if (weapon == "狩猟笛"){
 		weapon = "Hunting Horn";
-		icon = "./ressources/icons/HH.png";
+		icon = "./resources/icons/HH.png";
 	}
 	else if (weapon == "ランス"){
 		weapon = "Lance";
-		icon = "./ressources/icons/L.png";		
+		icon = "./resources/icons/L.png";
 	}
 	else if (weapon == "ガンランス"){
 		weapon = "Gunlance";
-		icon = "./ressources/icons/GL.png";		
+		icon = "./resources/icons/GL.png";
 	}
 	else if (weapon == "穿龍棍"){
 		weapon = "Tonfa";
-		icon = "./ressources/icons/T.png";		
+		icon = "./resources/icons/T.png";
 	}
 	else if (weapon == "スラッシュアックスF"){
 		weapon = "Switch Axe F";
-		icon = "./ressources/icons/SAF.png";		
+		icon = "./resources/icons/SAF.png";
 	}
 	else if (weapon == "マグネットスパイク"){
 		weapon = "Magnet Spike";
-		icon = "./ressources/icons/MS.png";		
+		icon = "./resources/icons/MS.png";
 	}
 	else if (weapon == "ヘビィボウガン"){
 		weapon = "Heavy Bowgun";
-		icon = "./ressources/icons/HS.png";		
+		icon = "./resources/icons/HS.png";
 	}
 	else if (weapon == "ライトボウガン"){
 		weapon = "Light Bowgun";
-		icon = "./ressources/icons/LB.png";		
+		icon = "./resources/icons/LB.png";
 	}
 	else if (weapon == "弓"){
 		weapon = "Bow";
-		icon = "./ressources/icons/B.png";		
+		icon = "./resources/icons/B.png";
 	}
 	else{
 	weapon = "Unknown"
-		icon = "./ressources/icons/null.png";
+		icon = "./resources/icons/null.png";
 	}
-		
+
 	if (DoOnceActive){
 		DoOnceActive = false;
 		var topDiv = $('<div/>')
@@ -122,7 +115,7 @@ function createCharListItem(name, uid, weapon, HR, GR, lastLogin, sex) {
 	.append($('<div id="gr_lvl"/>').text('GR' + GR))
 	.append($('<div id="sex"/>').text(sex))
 	.append($('<div id="uid"/>').text('ID: ' + uid))
-	.append($('<div id="lastlogin"/>').text('LastLogin ' + lastLogin));
+	.append($('<div id="lastlogin"/>').text('Last Login: ' + lastLogin));
 	topDiv.append(topLine);
 	topDiv.append(bottomLine);
 	$("#characterlist").append(topDiv);
@@ -131,7 +124,7 @@ $(function () {
 	try {
 		var charInfo = window.external.getCharacterInfo();
 	} catch (e) {
-		createErrorAlert("Error on getCharacterInfo!");
+		createErrorAlert("Error getting character info!");
 	}
 	try {
 		$xmlDoc = new ActiveXObject("Microsoft.XMLDOM");
@@ -139,7 +132,7 @@ $(function () {
 		$xmlDoc.loadXML(charInfo);
 		$xml = $($xmlDoc);
 	} catch (e) {
-		createErrorAlert("Error parsing character info xml!" + e);
+		createErrorAlert("Error parsing character info XML!" + e);
 	}
 
 	try {
@@ -168,10 +161,10 @@ $(function () {
 $(function() {
     var selectedUid = $(".char-list-entry.active").attr("uid");
 	$("#bt_new_char").on("click", function(e) {
-		alert("NOT WORK");
+		alert("Not yet implemented");
 	});
 	$("#bt_delete_char").on("click", function(e) {
-		alert("NOT WORK");
+		alert("Not yet implemented");
 	});
 });
 

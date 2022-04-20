@@ -16,16 +16,16 @@ function createErrorAlert(message) {
 function checkAuthResult() {
     var loginResult = window.external.getLastAuthResult();
     console.log('|' + loginResult + '|');
-    if(loginResult == "AUTH_PROGRESS") {
+    if (loginResult == "AUTH_PROGRESS") {
         setTimeout(checkAuthResult, 10);
     } else if (loginResult == "AUTH_SUCCESS") {
-		saveAccount();
-		createGoodAlert("Connected.");
-		createNormalAlert("After selecting a character, press [Start]");
-        window.location.href = 'charsel.html'
+				saveAccount();
+				createGoodAlert("Connected.");
+				createNormalAlert("After selecting a character, press [Launch]");
+				window.location.href = "charsel.html";
     } else {
 		elementID.style.display = "none";
-        createErrorAlert("Error logging in ! ");
+        createErrorAlert("Error logging in!");
     }
 }
 
@@ -33,7 +33,7 @@ function saveAccount() {
 	var userName = document.getElementById("username").value;
 	var password = document.getElementById("password").value;
 	var checkBox = document.getElementById("saveAccount");
-	
+
 	if (checkBox.checked == true){
 		localStorage.setItem('pseudo', userName);
 		localStorage.setItem('pswd', password);
@@ -54,21 +54,19 @@ $(function() {
 	elementID = document.getElementById("Block");
     // Login form submission.
     $("#loginform").submit(function(e){
-    
+
 	e.preventDefault();
     elementID.style.display = "block";
     username = $("#username").val();
     password = $("#password").val();
-	
-	if (username == ""){
-		createErrorAlert("Please insert Erupe ID!");
-	}
-	if (password == ""){
-		createErrorAlert("Please insert Password!");
-	}
-	else{
+
+	if (username == "") {
+		createErrorAlert("Please enter Erupe ID!");
+	} else if (password == "") {
+		createErrorAlert("Please enter Password!");
+	} else {
 		createNormalAlert("Authenticating...");
-		try{
+		try {
 			window.external.loginCog(username, password, password);
 			} catch(e){
 				createErrorAlert("Error on loginCog: " + e + ".");
