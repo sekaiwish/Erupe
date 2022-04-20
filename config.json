@@ -47,23 +47,21 @@
       "season": 3,
       "unk6": 0,
       "allowedclientflags": 0,
-      "channels": [
-        {
-          "port": 54001,
-          "MaxPlayers": 50,
-          "CurrentPlayers": 0,
-          "Unk4": 0,
-          "Unk5": 0,
-          "Unk6": 0,
-          "Unk7": 0,
-          "Unk8": 0,
-          "Unk9": 0,
-          "Unk10": 318,
-          "Unk11": 251,
-          "Unk12": 155,
-          "Unk13": 12345
-        }
-      ]
+      "channels": [ {
+        "port": 54001,
+        "MaxPlayers": 50,
+        "CurrentPlayers": 0,
+        "Unk4": 0,
+        "Unk5": 0,
+        "Unk6": 0,
+        "Unk7": 0,
+        "Unk8": 0,
+        "Unk9": 0,
+        "Unk10": 318,
+        "Unk11": 251,
+        "Unk12": 155,
+        "Unk13": 12345
+      } ]
     } ]
   }
 }
