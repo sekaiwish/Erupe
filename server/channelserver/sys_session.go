@@ -177,10 +177,13 @@ func (s *Session) handlePacketGroup(pktGroup []byte) {
 			opcode != network.MSG_SYS_PING &&
 			opcode != network.MSG_SYS_NOP &&
 			opcode != network.MSG_SYS_TIME &&
+			opcode != network.MSG_SYS_POSITION_OBJECT &&
 			opcode != network.MSG_SYS_EXTEND_THRESHOLD {
 			fmt.Printf("[%s] send to Server\n", s.Name)
 			fmt.Printf("Opcode: %s\n", opcode)
-			fmt.Printf("Data [%d bytes]:\n%s\n", len(pktGroup), hex.Dump(pktGroup))
+			if s.server.erupeConfig.DevModeOptions.OpcodeData {
+				fmt.Printf("Data [%d bytes]:\n%s\n", len(pktGroup), hex.Dump(pktGroup))
+			}
 		}
 	}
 	if opcode == network.MSG_SYS_LOGOUT {
