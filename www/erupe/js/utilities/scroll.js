@@ -4,22 +4,22 @@ var target;
 var targetOffset;
 
 // Button Top
-$("#bt_up_char_list").on("click" ,function(e){
+$("#charsel_char_list_up").on("click" ,function(e){
 	e.preventDefault();
-	target = $('.char-list-entry.active').prev('.char-list-entry');
+	target = $('.charsel_char.active').prev('.charsel_char');
 	if (target.length == 0)
-		target = $('.char-list-entry:last');
+		target = $('.charsel_char:last');
 	scrollTo(target);
 	$('.active').removeClass('active');
 	target.addClass('active');
 });
 
 // Button Bottom
-$("#bt_down_char_list").on("click" ,function(e){
+$("#charsel_char_list_down").on("click" ,function(e){
 	e.preventDefault();
-	target = $('.char-list-entry.active').next('.char-list-entry');
+	target = $('.charsel_char.active').next('.charsel_char');
 	if (target.length == 0)
-		target = $('.char-list-entry:first');
+		target = $('.charsel_char:first');
 	scrollTo(target);
 	$('.active').removeClass('active');
 	target.addClass('active');
@@ -28,9 +28,9 @@ $("#bt_down_char_list").on("click" ,function(e){
 // Work Animation
 function scrollTo(selector) {
 	var offset = $(selector).offset();
-    var $characterlist = $('#characterlist');
-    $characterlist.animate({
-		scrollTop: offset.top - ($characterlist.offset().top - $characterlist.scrollTop())
+    var $charsel_list = $('#charsel_list');
+    $charsel_list.animate({
+		scrollTop: offset.top - ($charsel_list.offset().top - $charsel_list.scrollTop())
     }, time);
 }
 

@@ -20,60 +20,50 @@
 		<script type="text/javascript" src="js/utilities/preload.js"></script>
 		<script type="text/javascript" src="js/main.js"></script>
 		<script type="text/javascript" src="js/utilities/audio.js"></script>
+		<!--script async type="text/javascript" src="js/utilities/scroll.js"></script-->
 	</head>
 	<body>
-		<div id="titlebar">
-			<div id="logo" class='left'>
-			<p id="fond_logo"></p>
-			<div id="version">
+		<div id="main_titlebar">
+			<div id="main_logo" class='left'>
+			<p id="main_titlebar_background"></p>
+			<div id="main_version">
 				<p style="font-weight: bold; font-size:15px; margin: auto;">Monster Hunter</p>
 				<p style="font-weight: bold;font-size:15px;margin: auto;position:relative;bottom: 4px;">Frontier Z Launcher </p>
 				<p style="position:relative;bottom: 4px;margin: auto;">release ver. 2.016 (Erupe)</p>
 			</div>
-			<img id="ico_fond" src="resources/icons/ico_title.png">
-			<img id="logo_pic" src="resources/logo.png">
+			<img id="main_small_icon" src="resources/icons/ico_title.png">
+			<img id="main_logo_full" src="resources/logo.png">
 			</div>
 			<div class="right">
-				<a id="exit" class="nav-link" href="#" onclick="CUE_Selected()" onmouseover="CUE_Cursor()">&times;</a>
+				<a id="main_exit" class="nav-link" href="#" onclick="CUE_Selected()" onmouseover="CUE_Cursor()">✕</a>
 			</div>
 			<div class="right">
-				<a id="reduce" class="nav-link" href="#" onclick="CUE_Selected()" onmouseover="CUE_Cursor()">_</a>
+				<a id="main_reduce" class="nav-link" href="#" onclick="CUE_Selected()" onmouseover="CUE_Cursor()">＿</a>
 			</div>
 		</div>
 		<div class="container-fluid" style="height: 47%!important;width: 51.8%;">
 			<div class="row no-gutters h-100">
-				<div id="mainParent" class="col-12">
-					<iframe src="login.html" style="width: 100%; height: 100%; border: none; overflow:hidden;" frameBorder="0" scrolling="no"></iframe>
-				</div>
+				<div id="main_parent" class="col-12"></div>
 			</div>
 		</div>
 		<div class="container-fluid px-0 h-25">
 			<div class="row no-gutters h-100">
 				<div class="col-12">
 				<div class="col-1" style="max-width: 3.5%;"></div>
-					<div id="Box_Diag">
-						<div id = "Dialog_Alert">
-							<div id="alertBox"></div>
-							<div id="alertBox-box"></div>
+					<div id="main_box_dialog">
+						<div id="main_box_parent">
+							<div id="main_box_alert"></div>
 						</div>
 					</div>
-					<div id="submitForm">
-						<button id="configButton" class="btn btn-secondary" onclick="CUE_Selected()" onmouseover="CUE_Cursor()">Config</button>
+					<div id="main_config">
+						<button id="main_config_button" class="btn btn-secondary" onclick="CUE_Selected()" onmouseover="CUE_Cursor()"></button>
 					</div>
 				</div>
 			</div>
 		</div>
-		<footer id="footerID">
-			<div id="AllMark">
-				<div class="row">
-					<div class="column">
-						<a href="https://www.capcom.co.jp/" onclick="window.open(this.href); return false; CUE_Selected();" onmouseover="CUE_Cursor()"></a>
-					</div>
-				</div>
-			</div>
-		</footer>
-		<div id="BlockGlobal" style="display: none;">
-			<p style="width: 96.9%;height: 100%;background-image: url(./resources/start_now.png);background-position: center;background-repeat: no-repeat;"></p>
+		<footer id="main_footer"></footer>
+		<div id="main_start_now" style="display: none;z-index: 1000;">
+			<p style="z-index: 1001;width: 96.9%;height: 100%;background-image: url(./resources/start_now.png);background-position: center;background-repeat: no-repeat;"></p>
 		</div>
 	</body>
 </html>
