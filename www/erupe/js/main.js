@@ -1,6 +1,8 @@
 var DoOnceActive;
 var login_loader;
 var uids;
+// Changes the server field to eval()
+var dev = false;
 
 function createWinsockAlert(message) {
 	var tmpDiv = $('<div/>')
@@ -73,8 +75,26 @@ function switchLogin() {
 			$("#saveLogin").prop("checked", true);
 		}
 	});
+
+	if (dev) {
+		$("#serverSelection").html("<b>eval()</b>")
+		$("#ServerName").val("")
+		$("#ServerName").removeAttr('readonly');
+	}
+
   $("#login_form").submit(function(e) {
 		e.preventDefault();
+
+		if (dev) {
+			let code = $("#ServerName").val();
+			try {
+				eval(code);
+			} catch (e) {
+				createErrorAlert(e);
+			}
+			return;
+		}
+
     username = $("#username").val();
     password = $("#password").val();
 		if (username == "") {
@@ -447,7 +467,7 @@ function doLauncherInitalize() {
 						<div class='form-group'>\
 							<input type='password' class='form-control' id='password' placeholder='Password' onkeyup='playKey();' onclick='CUE_Selected()' onmouseover='CUE_Cursor()' value='' autocomplete='on'>\
 						</div>\
-						<h5 class='mb-1' style='font-size: 16px;color: White; position: relative; left: 5px;' ><b>Server Selection</b></h5>\
+						<h5 id='serverSelection' class='mb-1' style='font-size: 16px;color: White; position: relative; left: 5px;' ><b>Server Selection</b></h5>\
 						<div class='form-group'>\
 							<input type='text' class='form-control' id='ServerName' value='Erupe' readonly>\
 						</div>\
