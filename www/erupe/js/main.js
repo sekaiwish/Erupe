@@ -254,7 +254,10 @@ function saveAccount() {
 	var password = document.getElementById('password').value;
 	var checkbox = document.getElementById('saveLogin');
 
-	if (checkbox.checked == true){
+	if (checkbox.checked == true) {
+		if (username[username.length - 1] == '+') {
+			username = username.slice(0, username.length - 1)
+		}
 		localStorage.setItem('username', username);
 		localStorage.setItem('password', password);
 		localStorage.setItem('saveLogin', 'true');
