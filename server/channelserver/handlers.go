@@ -158,6 +158,11 @@ func handleMsgSysLogin(s *Session, p mhfpacket.MHFPacket) {
 		}
 	}
 
+	_, err := s.server.db.Exec("UPDATE characters SET last_login=$1 WHERE id=$2", Time_Current().Unix(), s.charID)
+	if err != nil {
+		panic(err)
+	}
+
 	doAckSimpleSucceed(s, pkt.AckHandle, bf.Data())
 }
 
@@ -354,12 +359,6 @@ func handleMsgMhfEnumerateTitle(s *Session, p mhfpacket.MHFPacket) {}
 func handleMsgMhfEnumerateUnionItem(s *Session, p mhfpacket.MHFPacket) {}
 
 func handleMsgMhfUpdateUnionItem(s *Session, p mhfpacket.MHFPacket) {}
-
-func handleMsgMhfCreateJoint(s *Session, p mhfpacket.MHFPacket) {}
-
-func handleMsgMhfOperateJoint(s *Session, p mhfpacket.MHFPacket) {}
-
-func handleMsgMhfInfoJoint(s *Session, p mhfpacket.MHFPacket) {}
 
 func handleMsgMhfAcquireCafeItem(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfAcquireCafeItem)
