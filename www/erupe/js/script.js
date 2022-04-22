@@ -218,8 +218,8 @@ function switchPrompt() {
     document.getElementById('char_select').style.display = 'block';
     try {
       // Example data for browser testing
-      var charInfo = "<?xml version='1.0' encoding='shift_jis'?><CharacterInfo defaultUid=''><Character name='Cynthia' uid='211111' weapon='双剣' HR='7' GR='998' lastLogin='1645961490' sex='F' /><Character name='狩人申請可能' uid='311111' weapon='大剣' HR='7' GR='0' lastLogin='1650486502' sex='M' /></CharacterInfo>";
-      //var charInfo = window.external.getCharacterInfo();
+      //var charInfo = "<?xml version='1.0' encoding='shift_jis'?><CharacterInfo defaultUid=''><Character name='Cynthia' uid='211111' weapon='双剣' HR='7' GR='998' lastLogin='1645961490' sex='F' /><Character name='狩人申請可能' uid='311111' weapon='大剣' HR='7' GR='0' lastLogin='1650486502' sex='M' /></CharacterInfo>";
+      var charInfo = window.external.getCharacterInfo();
       charInfo = charInfo.split("'").join('"');
       charInfo = charInfo.split('&apos;').join("'");
     } catch (e) {
