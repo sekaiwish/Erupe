@@ -2,6 +2,7 @@ package channelserver
 
 import (
 	"encoding/hex"
+	"time"
 
 	"github.com/Solenataris/Erupe/network/mhfpacket"
 	"github.com/Andoryuuta/byteframe"
@@ -17,6 +18,170 @@ func handleMsgMhfGetKijuInfo(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfSetKiju(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfSetKiju)
 	doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
+}
+
+func handleMsgMhfGetUdSchedule(s *Session, p mhfpacket.MHFPacket) {
+	pkt := p.(*mhfpacket.MsgMhfGetUdSchedule)
+
+	// Events with time limits are Festival with Sign up, Soul Week and Winners Weeks
+	// Diva Defense with Prayer, Interception and Song weeks
+	// Mezeporta Festival with simply 'available' being a weekend thing
+
+	midnight := Time_Current_Midnight()
+
+	resp := byteframe.NewByteFrame()
+	resp.WriteUint32(0x0b5397df) // Unk (1d5fda5c, 0b5397df)
+
+	/*
+	resp.WriteUint32(uint32(midnight.Add(-24 * 21 * time.Hour).Unix()))
+	resp.WriteUint32(uint32(midnight.Add(-24 * 14 * time.Hour).Unix()))
+	resp.WriteUint32(uint32(midnight.Add(-24 * 7 * time.Hour).Unix()))
+	resp.WriteUint32(uint32(midnight.Unix()))
+	resp.WriteUint32(uint32(midnight.Add(24 * 7 * time.Hour).Unix()))
+	resp.WriteUint32(uint32(midnight.Add(24 * 14 * time.Hour).Unix()))
+	resp.WriteUint32(uint32(midnight.Add(24 * 21 * time.Hour).Unix()))
+	*/
+
+	resp.WriteUint32(uint32(midnight.Add(-24 * 14 * time.Hour).Unix())) // Week 1 Timestamp, Festi start?
+	resp.WriteUint32(uint32(midnight.Add(-24 * 7 * time.Hour).Unix())) // Week 2 Timestamp
+	resp.WriteUint32(uint32(midnight.Add(-24 * 7 * time.Hour).Unix())) // Week 2 Timestamp
+	resp.WriteUint32(uint32(midnight.Unix())) // Diva Defense Interception
+	resp.WriteUint32(uint32(midnight.Unix())) // Diva Defense Interception
+	resp.WriteUint32(uint32(midnight.Add(24 * 7 * time.Hour).Unix())) // Diva Defense Greeting Song
+
+
+	/*
+	if event == 1 {
+		resp.WriteUint32(uint32(midnight.Add(24 * 21 * time.Hour).Unix())) // Week 1 Timestamp, Festi start?
+	} else {
+		resp.WriteUint32(uint32(midnight.Add(-24 * 21 * time.Hour).Unix())) // Week 1 Timestamp, Festi start?
+	}
+
+	if event == 2 {
+		resp.WriteUint32(uint32(midnight.Add(24 * 14 * time.Hour).Unix())) // Week 2 Timestamp
+		resp.WriteUint32(uint32(midnight.Add(24 * 14 * time.Hour).Unix())) // Week 2 Timestamp
+	} else {
+		resp.WriteUint32(uint32(midnight.Add(-24 * 14 * time.Hour).Unix())) // Week 2 Timestamp
+		resp.WriteUint32(uint32(midnight.Add(-24 * 14 * time.Hour).Unix())) // Week 2 Timestamp
+	}
+
+	if event == 3 {
+		resp.WriteUint32(uint32(midnight.Add((24) * 7 * time.Hour).Unix()))  // Diva Defense Interception
+		resp.WriteUint32(uint32(midnight.Add((24) * 14 * time.Hour).Unix())) // Diva Defense Greeting Song
+	} else {
+		resp.WriteUint32(uint32(midnight.Add((-24) * 7 * time.Hour).Unix()))  // Diva Defense Interception
+		resp.WriteUint32(uint32(midnight.Add((-24) * 14 * time.Hour).Unix())) // Diva Defense Greeting Song
+	}
+	*/
+
+	resp.WriteUint16(0x0019) // Unk 00000000 00011001
+	resp.WriteUint16(0x002d) // Unk 00000000 00101101
+	resp.WriteUint16(0x0002) // Unk 00000000 00000010
+	resp.WriteUint16(0x0002) // Unk 00000000 00000010
+
+	doAckBufSucceed(s, pkt.AckHandle, resp.Data())
+}
+
+/*
+func handleMsgMhfGetUdSchedule(s *Session, p mhfpacket.MHFPacket) {
+	pkt := p.(*mhfpacket.MsgMhfGetUdSchedule)
+	resp := byteframe.NewByteFrame()
+
+	resp.WriteUint32(0x1d5fda5c)                  // Unk (1d5fda5c, 0b5397df)
+	resp.WriteUint32(uint32(ScheduleEvent(s, 1))) // Week 1 Timestamp, Festi start?
+	resp.WriteUint32(uint32(ScheduleEvent(s, 2))) // Diva Defense Interception 1
+	resp.WriteUint32(uint32(ScheduleEvent(s, 3))) // Week 2 Timestamp
+	resp.WriteUint32(uint32(ScheduleEvent(s, 4))) // Diva Defense Interception 2
+	resp.WriteUint32(uint32(ScheduleEvent(s, 5))) // Week 3 Timestamp
+	resp.WriteUint32(uint32(ScheduleEvent(s, 6))) // Diva Defense Greeting Song 3
+	resp.WriteUint16(0x19)                        // Unk 00011001
+	resp.WriteUint16(0x2d)                        // Unk 00101101
+	resp.WriteUint16(0x02)                        // Unk 00000010
+	resp.WriteUint16(0x02)                        // Unk 00000010
+
+	doAckBufSucceed(s, pkt.AckHandle, resp.Data())
+}
+
+var timedb int64
+var countEvent int = 1
+var BlockSchedulEvent bool
+var t_Next_SchedulEvent = Time_Current_Adjusted()
+var t_curr_SchedulEvent = Time_Current_Adjusted().Unix()
+
+func ScheduleEvent(s *Session, fixWeek int) uint32 {
+	if !BlockSchedulEvent {
+		if s.server.erupeConfig.DevModeOptions.ServerName != "" { // IF (SERVERNAME == NAME)
+			err := s.server.db.QueryRow("SELECT event_id FROM servers WHERE server_name=$1", s.server.erupeConfig.DevModeOptions.ServerName).Scan(&countEvent)
+			if err != nil {
+				panic(err)
+			}
+			s.server.db.QueryRow("SELECT date_expiration FROM servers server_name=$1", s.server.erupeConfig.DevModeOptions.ServerName).Scan(&timedb)
+			if t_curr_SchedulEvent >= timedb {
+				countEvent += 1
+				if countEvent == 7 {
+					countEvent = 1
+				}
+				var t_Add_Next_SchedulEvent = t_Next_SchedulEvent.Add(7 * 24 * time.Hour).Unix()
+				_, err := s.server.db.Exec("UPDATE servers SET event_id=$1, event_expiration=$2 WHERE server_name=$3", countEvent, t_Add_Next_SchedulEvent, s.server.erupeConfig.DevModeOptions.ServerName)
+				if err == nil {
+					s.server.db.QueryRow("SELECT event_id FROM servers WHERE id=$1").Scan(&countEvent)
+				}
+			}
+			BlockSchedulEvent = fixWeek == countEvent
+		} else { // ELSE (SERVERNAME == NULL)
+			err := s.server.db.QueryRow("SELECT event_id FROM event_week WHERE id=1").Scan(&countEvent)
+			if err != nil {
+				var t_Add_Next_SchedulEvent = t_Next_SchedulEvent.Add(7 * 24 * time.Hour).Unix()
+				s.server.db.Exec("INSERT INTO event_week (id, event_id, date_expiration) VALUES (1, $1, $2)", countEvent, t_Add_Next_SchedulEvent)
+				s.server.db.QueryRow("SELECT event_id FROM event_week WHERE id=1").Scan(&countEvent)
+			}
+			s.server.db.QueryRow("SELECT date_expiration FROM event_week WHERE id=1").Scan(&timedb)
+			if t_curr_SchedulEvent >= timedb {
+				countEvent += 1
+				if countEvent == 7 {
+					countEvent = 1
+				}
+				var t_Add_Next_SchedulEvent = t_Next_SchedulEvent.Add(7 * 24 * time.Hour).Unix()
+				_, err := s.server.db.Exec("UPDATE event_week SET event_id=$1, date_expiration=$2 WHERE id=1", countEvent, t_Add_Next_SchedulEvent)
+				if err == nil {
+					s.server.db.QueryRow("SELECT event_id FROM event_week WHERE id=1").Scan(&countEvent)
+				}
+			}
+			BlockSchedulEvent = fixWeek == countEvent
+		}
+	}
+	if fixWeek == countEvent {
+		return uint32(Time_Current_Midnight().Add(7 * 24 * time.Hour).Unix())
+	} else {
+		return uint32(Time_Current_Midnight().Add(-24 * 21 * time.Hour).Unix())
+	}
+}
+*/
+
+func handleMsgMhfGetUdInfo(s *Session, p mhfpacket.MHFPacket) {
+	pkt := p.(*mhfpacket.MsgMhfGetUdInfo)
+	// Message that appears on the Diva Defense NPC and triggers the green exclamation mark
+	udInfos := []struct {
+		Text      string
+		StartTime time.Time
+		EndTime   time.Time
+	}{
+		{
+			Text:      " ~C17【Erupe】 is dead event!\n\n■Features\n~C18 Dont bother walking around!\n~C17 Take down your DB by doing \n~C17 nearly anything!",
+			StartTime: Time_static().Add(time.Duration(-5) * time.Minute), // Event started 5 minutes ago,
+			EndTime:   Time_static().Add(time.Duration(24) * time.Hour),   // Event ends in 5 minutes,
+		},
+	}
+
+	resp := byteframe.NewByteFrame()
+	resp.WriteUint8(uint8(len(udInfos)))
+	for _, udInfo := range udInfos {
+		resp.WriteBytes(fixedSizeShiftJIS(udInfo.Text, 1024))
+		resp.WriteUint32(uint32(udInfo.StartTime.Unix()))
+		resp.WriteUint32(uint32(udInfo.EndTime.Unix()))
+	}
+
+	doAckBufSucceed(s, pkt.AckHandle, resp.Data())
 }
 
 func handleMsgMhfAddUdPoint(s *Session, p mhfpacket.MHFPacket) {
@@ -191,13 +356,28 @@ func handleMsgMhfGetUdNormaPresentList(s *Session, p mhfpacket.MHFPacket) {
 	doAckBufSucceed(s, pkt.AckHandle, data)
 }
 
-func handleMsgMhfAcquireUdItem(s *Session, p mhfpacket.MHFPacket) {}
+func handleMsgMhfAcquireUdItem(s *Session, p mhfpacket.MHFPacket) {
+	pkt := p.(*mhfpacket.MsgMhfAcquireUdItem)
+	doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
+}
 
-func handleMsgMhfGetUdRanking(s *Session, p mhfpacket.MHFPacket) {}
+func handleMsgMhfGetUdRanking(s *Session, p mhfpacket.MHFPacket) {
+	pkt := p.(*mhfpacket.MsgMhfGetUdRanking)
+	doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
+}
 
 func handleMsgMhfGetUdMyRanking(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfGetUdMyRanking)
-	// Temporary canned response
-	data, _ := hex.DecodeString("00000515000005150000CEB4000003CE000003CE0000CEB44D49444E494748542D414E47454C0000000000000000000000")
-	doAckBufSucceed(s, pkt.AckHandle, data)
+	bf := byteframe.NewByteFrame()
+
+	bf.WriteUint32(1) // character rank
+	bf.WriteUint32(1) // something to do with the upper part
+	bf.WriteUint32(1) // character points
+
+	bf.WriteUint32(1) // guild rank
+	bf.WriteUint32(1) // something to do with the upper part
+	bf.WriteUint32(1) // guild points
+	bf.WriteBytes([]byte{0x74, 0x65, 0x73, 0x74, 0x00}) // guild name
+
+	doAckBufSucceed(s, pkt.AckHandle, bf.Data())
 }

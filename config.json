@@ -8,11 +8,12 @@
     "maxlauncherhr": true,
     "LogOutboundMessages": false,
     "Event": 0,
-    "OpcodeMessages": false,
-    "OpcodeData": false,
+    "OpcodeMessages": true,
+    "OpcodeData": true,
     "SaveDumps": {
       "Enabled": true,
-      "OutputDir": "savedata"
+      "OutputDir": "savedata",
+      "Raw": true
     }
   },
   "discord": {
@@ -35,33 +36,59 @@
     "port": 53312
   },
   "channel": {
-    "port1": 54001
+    "port1": 54001,
+    "port2": 54002
   },
   "entrance": {
     "port": 53310,
-    "entries": [ {
-      "name": "AErupe",
-      "ip": "",
-      "unk2": 0,
-      "type": 1,
-      "season": 3,
-      "unk6": 0,
-      "allowedclientflags": 0,
-      "channels": [ {
-        "port": 54001,
-        "MaxPlayers": 50,
-        "CurrentPlayers": 0,
-        "Unk4": 0,
-        "Unk5": 0,
-        "Unk6": 0,
-        "Unk7": 0,
-        "Unk8": 0,
-        "Unk9": 0,
-        "Unk10": 318,
-        "Unk11": 251,
-        "Unk12": 155,
-        "Unk13": 12345
-      } ]
-    } ]
+    "entries": [
+      {
+        "name": "AMain",
+        "ip": "",
+        "unk2": 0,
+        "type": 1,
+        "season": 3,
+        "unk6": 0,
+        "allowedclientflags": 0,
+        "channels": [ {
+          "port": 54001,
+          "MaxPlayers": 50,
+          "CurrentPlayers": 0,
+          "Unk4": 0,
+          "Unk5": 0,
+          "Unk6": 0,
+          "Unk7": 0,
+          "Unk8": 0,
+          "Unk9": 0,
+          "Unk10": 318,
+          "Unk11": 251,
+          "Unk12": 155,
+          "Unk13": 12345
+        } ]
+      }, {
+        "name": "AMFTest",
+        "ip": "",
+        "unk2": 0,
+        "type": 6,
+        "season": 3,
+        "unk6": 0,
+        "allowedclientflags": 0,
+        "channels": [ {
+          "port": 54002,
+          "MaxPlayers": 50,
+          "CurrentPlayers": 0,
+          "Unk4": 0,
+          "Unk5": 0,
+          "Unk6": 0,
+          "Unk7": 0,
+          "Unk8": 0,
+          "Unk9": 0,
+          "Unk10": 318,
+          "Unk11": 251,
+          "Unk12": 155,
+          "Unk13": 12345
+        } ]
+      }
+    ]
   }
 }

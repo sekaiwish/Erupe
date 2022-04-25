@@ -8,7 +8,11 @@ import (
 	"go.uber.org/zap"
 )
 
-func handleMsgMhfUpdateInterior(s *Session, p mhfpacket.MHFPacket) {}
+func handleMsgMhfUpdateInterior(s *Session, p mhfpacket.MHFPacket) {
+	pkt := p.(*mhfpacket.MsgMhfUpdateInterior)
+	// no idea what response the game wants to not softlock
+	doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
+}
 
 func handleMsgMhfEnumerateHouse(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfEnumerateHouse)

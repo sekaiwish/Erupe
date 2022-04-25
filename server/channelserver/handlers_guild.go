@@ -53,6 +53,7 @@ type Guild struct {
 	Comment        string         `db:"comment"`
 	FestivalColour FestivalColour `db:"festival_colour"`
 	Rank           uint16         `db:"rank"`
+	AllianceID     uint32         `db:"alliance_id"`
 	Icon           *GuildIcon     `db:"icon"`
 
 	GuildLeader
@@ -120,6 +121,11 @@ SELECT
 		WHEN g.rp < 1200 THEN 16
 		ELSE 17
 	END rank,
+	(SELECT id FROM guild_alliances ga WHERE
+	 	ga.parent_id = g.id OR
+	 	ga.sub1_id = g.id OR
+	 	ga.sub2_id = g.id
+	) AS alliance_id,
 	icon,
 	(
 		SELECT count(1) FROM guild_characters gc WHERE gc.guild_id = g.id
@@ -589,6 +595,10 @@ func buildGuildObjectFromDbResult(result *sqlx.Rows, err error, s *Session) (*Gu
 	return guild, nil
 }
 
+/*
+Actual packet handling starts here
+*/
+
 func handleMsgMhfCreateGuild(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfCreateGuild)
 
@@ -631,101 +641,127 @@ func handleMsgMhfOperateGuild(s *Session, p mhfpacket.MHFPacket) {
 	bf := byteframe.NewByteFrame()
 
 	switch pkt.Action {
-	case mhfpacket.OPERATE_GUILD_ACTION_DISBAND:
-		if guild.LeaderCharID != s.charID {
-			s.logger.Warn(fmt.Sprintf("character '%d' is attempting to manage guild '%d' without permission", s.charID, guild.ID))
+		case mhfpacket.OPERATE_GUILD_ACTION_DISBAND:
+			if guild.LeaderCharID != s.charID {
+				s.logger.Warn(fmt.Sprintf("character '%d' is attempting to manage guild '%d' without permission", s.charID, guild.ID))
+				return
+			}
+
+			err = guild.Disband(s)
+			response := 0x01
+
+			if err != nil {
+				// All successful acks return 0x01, assuming 0x00 is failure
+				response = 0x00
+			}
+
+			bf.WriteUint32(uint32(response))
+		case mhfpacket.OPERATE_GUILD_ACTION_APPLY:
+			err = guild.CreateApplication(s, s.charID, GuildApplicationTypeApplied, nil)
+
+			if err != nil {
+				// All successful acks return 0x01, assuming 0x00 is failure
+				bf.WriteUint32(0x00)
+			} else {
+				bf.WriteUint32(guild.LeaderCharID)
+			}
+		case mhfpacket.OPERATE_GUILD_ACTION_LEAVE:
+			var err error
+
+			if characterGuildInfo.IsApplicant {
+				err = guild.RejectApplication(s, s.charID)
+			} else {
+				err = guild.RemoveCharacter(s, s.charID)
+			}
+
+			response := 0x01
+
+			if err != nil {
+				// All successful acks return 0x01, assuming 0x00 is failure
+				response = 0x00
+			}
+
+			bf.WriteUint32(uint32(response))
+		case mhfpacket.OPERATE_GUILD_ACTION_DONATE:
+			err := handleOperateGuildActionDonate(s, guild, pkt, bf)
+
+			if err != nil {
+				return
+			}
+		case mhfpacket.OPERATE_GUILD_SET_APPLICATION_DENY:
+			// TODO: close applications for guild
+			doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 			return
-		}
+		case mhfpacket.OPERATE_GUILD_SET_APPLICATION_ALLOW:
+			// TODO: open applications for guild
+			doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
+			return
+		case mhfpacket.OPERATE_GUILD_SET_AVOID_LEADERSHIP_TRUE:
+			handleAvoidLeadershipUpdate(s, pkt, true)
+		case mhfpacket.OPERATE_GUILD_SET_AVOID_LEADERSHIP_FALSE:
+			handleAvoidLeadershipUpdate(s, pkt, false)
+		case mhfpacket.OPERATE_GUILD_ACTION_UPDATE_COMMENT:
+			pbf := byteframe.NewByteFrameFromBytes(pkt.UnkData)
 
-		err = guild.Disband(s)
-		response := 0x01
+			if !characterGuildInfo.IsLeader && !characterGuildInfo.IsSubLeader() {
+				doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
+				return
+			}
 
-		if err != nil {
-			// All successful acks return 0x01, assuming 0x00 is failure
-			response = 0x00
-		}
+			commentLength := pbf.ReadUint8()
+			_ = pbf.ReadUint32()
 
-		bf.WriteUint32(uint32(response))
-	case mhfpacket.OPERATE_GUILD_ACTION_APPLY:
-		err = guild.CreateApplication(s, s.charID, GuildApplicationTypeApplied, nil)
+			guild.Comment, err = s.clientContext.StrConv.Decode(bfutil.UpToNull(pbf.ReadBytes(uint(commentLength))))
 
-		if err != nil {
-			// All successful acks return 0x01, assuming 0x00 is failure
+			if err != nil {
+				s.logger.Warn("failed to convert guild comment to UTF8", zap.Error(err))
+				doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
+				break
+			}
+
+			err = guild.Save(s)
+
+			if err != nil {
+				doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
+				return
+			}
+
 			bf.WriteUint32(0x00)
-		} else {
-			bf.WriteUint32(guild.LeaderCharID)
-		}
-	case mhfpacket.OPERATE_GUILD_ACTION_LEAVE:
-		var err error
+		case mhfpacket.OPERATE_GUILD_ACTION_UPDATE_MOTTO:
+			if !characterGuildInfo.IsLeader && !characterGuildInfo.IsSubLeader() {
+				doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
+				return
+			}
 
-		if characterGuildInfo.IsApplicant {
-			err = guild.RejectApplication(s, s.charID)
-		} else {
-			err = guild.RemoveCharacter(s, s.charID)
-		}
+			guild.SubMotto = pkt.UnkData[3]
+			guild.MainMotto = pkt.UnkData[4]
 
-		response := 0x01
+			err := guild.Save(s)
 
-		if err != nil {
-			// All successful acks return 0x01, assuming 0x00 is failure
-			response = 0x00
-		}
-
-		bf.WriteUint32(uint32(response))
-	case mhfpacket.OPERATE_GUILD_ACTION_DONATE:
-		err := handleOperateGuildActionDonate(s, guild, pkt, bf)
-
-		if err != nil {
+			if err != nil {
+				doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
+				return
+			}
+		case mhfpacket.OPERATE_GUILD_ACTION_RENAME_PUGI_1:
+			doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 			return
-		}
-	case mhfpacket.OPERATE_GUILD_SET_AVOID_LEADERSHIP_TRUE:
-		handleAvoidLeadershipUpdate(s, pkt, true)
-	case mhfpacket.OPERATE_GUILD_SET_AVOID_LEADERSHIP_FALSE:
-		handleAvoidLeadershipUpdate(s, pkt, false)
-	case mhfpacket.OPERATE_GUILD_ACTION_UPDATE_COMMENT:
-		pbf := byteframe.NewByteFrameFromBytes(pkt.UnkData)
-
-		if !characterGuildInfo.IsLeader && !characterGuildInfo.IsSubLeader() {
-			doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
+		case mhfpacket.OPERATE_GUILD_ACTION_RENAME_PUGI_2:
+			doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 			return
-		}
-
-		commentLength := pbf.ReadUint8()
-		_ = pbf.ReadUint32()
-
-		guild.Comment, err = s.clientContext.StrConv.Decode(bfutil.UpToNull(pbf.ReadBytes(uint(commentLength))))
-
-		if err != nil {
-			s.logger.Warn("failed to convert guild comment to UTF8", zap.Error(err))
-			doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
-			break
-		}
-
-		err = guild.Save(s)
-
-		if err != nil {
-			doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
+		case mhfpacket.OPERATE_GUILD_ACTION_RENAME_PUGI_3:
+			doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 			return
-		}
-
-		bf.WriteUint32(0x00)
-	case mhfpacket.OPERATE_GUILD_ACTION_UPDATE_MOTTO:
-		if !characterGuildInfo.IsLeader && !characterGuildInfo.IsSubLeader() {
-			doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
+		case mhfpacket.OPERATE_GUILD_ACTION_CHANGE_PUGI_1:
+			doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 			return
-		}
-
-		guild.SubMotto = pkt.UnkData[3]
-		guild.MainMotto = pkt.UnkData[4]
-
-		err := guild.Save(s)
-
-		if err != nil {
-			doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
+		case mhfpacket.OPERATE_GUILD_ACTION_CHANGE_PUGI_2:
+			doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 			return
-		}
-	default:
-		panic(fmt.Sprintf("unhandled operate guild action '%d'", pkt.Action))
+		case mhfpacket.OPERATE_GUILD_ACTION_CHANGE_PUGI_3:
+			doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
+			return
+		default:
+			panic(fmt.Sprintf("unhandled operate guild action '%d'", pkt.Action))
 	}
 
 	doAckSimpleSucceed(s, pkt.AckHandle, bf.Data())
@@ -976,31 +1012,101 @@ func handleMsgMhfInfoGuild(s *Session, p mhfpacket.MHFPacket) {
 			0x00, 0x00, 0xD6, 0xD8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 		})
 
-		bf.WriteUint32(0x00) // Alliance ID
-
-		// TODO add alliance parts here
-		//
-		//if (AllianceID != 0) {
-		//  uint16 AllianceDataUnk;
-		//  uint16 AllianceDataUnk;
-		//  uint16 AllianceNameLength;
-		//	char AllianceName[AllianceNameLength];
-		//
-		//	byte NumAllianceMembers;
-		//
-		//	struct AllianceMember {
-		//		uint32 Unk;
-		//		uint32 Unk;
-		//		uint16 Unk;
-		//		uint16 Unk;
-		//		uint16 Unk;
-		//		uint16 GuildNameLength;
-		//		char GuildName[GuildNameLength];
-		//		uint16 GuildLeaderNameLength;
-		//		char GuildLeaderName[GuildLeaderNameLength];
-		//
-		//	} member[NumAllianceMembers] <optimize=false>;
-		//}
+		if guild.AllianceID > 0 {
+			alliance, err := GetAllianceData(s, guild.AllianceID)
+			if err != nil {
+				bf.WriteUint32(0) // Error alliance
+			} else {
+				allianceName, err1 := stringsupport.ConvertUTF8ToShiftJIS(alliance.Name)
+				if err1 != nil {
+					s.server.logger.Info("Error converting alliance name!")
+				}
+				allianceParentName, err2 := stringsupport.ConvertUTF8ToShiftJIS(alliance.ParentName)
+				if err2 != nil {
+					s.server.logger.Info("Error converting alliance parent guild name!")
+				}
+				allianceParentOwner, err3 := stringsupport.ConvertUTF8ToShiftJIS(alliance.ParentOwner)
+				if err3 != nil {
+					s.server.logger.Info("Error converting alliance parent guild owner!")
+				}
+				allianceSub1Name, err4 := stringsupport.ConvertUTF8ToShiftJIS(alliance.Sub1Name)
+				if err4 != nil {
+					s.server.logger.Info("Error converting alliance sub guild 1 name!")
+				}
+				allianceSub1Owner, err5 := stringsupport.ConvertUTF8ToShiftJIS(alliance.Sub1Owner)
+				if err5 != nil {
+					s.server.logger.Info("Error converting alliance sub guild 1 owner!")
+				}
+				allianceSub2Name, err6 := stringsupport.ConvertUTF8ToShiftJIS(alliance.Sub2Name)
+				if err6 != nil {
+					s.server.logger.Info("Error converting alliance sub guild 2 name!")
+				}
+				allianceSub2Owner, err7 := stringsupport.ConvertUTF8ToShiftJIS(alliance.Sub2Owner)
+				if err7 != nil {
+					s.server.logger.Info("Error converting alliance sub guild 2 owner!")
+				}
+				bf.WriteUint32(alliance.ID)
+				bf.WriteUint32(uint32(alliance.CreatedAt.Unix()))
+				bf.WriteUint16(0) // Placeholder
+				bf.WriteUint16(0) // Unk0
+				bf.WriteUint16(uint16(len(allianceName)))
+				bf.WriteBytes(allianceName)
+				if alliance.Sub1ID > 0 {
+					if alliance.Sub2ID > 0 {
+						bf.WriteUint8(3)
+					} else {
+						bf.WriteUint8(2)
+					}
+				} else {
+					bf.WriteUint8(1)
+				}
+				bf.WriteUint32(alliance.ParentID)
+				bf.WriteUint32(0) // Unk1
+				if alliance.ParentID == guild.ID {
+					bf.WriteUint16(1)
+				} else {
+					bf.WriteUint16(0)
+				}
+				bf.WriteUint16(alliance.ParentRank)
+				bf.WriteUint16(alliance.ParentMembers)
+				bf.WriteUint16(uint16(len(allianceParentName)))
+				bf.WriteBytes(allianceParentName)
+				bf.WriteUint16(uint16(len(allianceParentOwner)))
+				bf.WriteBytes(allianceParentOwner)
+				if alliance.Sub1ID > 0 {
+					bf.WriteUint32(alliance.Sub1ID)
+					bf.WriteUint32(0) // Unk1
+					if alliance.Sub1ID == guild.ID {
+						bf.WriteUint16(1)
+					} else {
+						bf.WriteUint16(0)
+					}
+					bf.WriteUint16(alliance.Sub1Rank)
+					bf.WriteUint16(alliance.Sub1Members)
+					bf.WriteUint16(uint16(len(allianceSub1Name)))
+					bf.WriteBytes(allianceSub1Name)
+					bf.WriteUint16(uint16(len(allianceSub1Owner)))
+					bf.WriteBytes(allianceSub1Owner)
+				}
+				if alliance.Sub2ID > 0 {
+					bf.WriteUint32(alliance.Sub2ID)
+					bf.WriteUint32(0) // Unk1
+					if alliance.Sub2ID == guild.ID {
+						bf.WriteUint16(1)
+					} else {
+						bf.WriteUint16(0)
+					}
+					bf.WriteUint16(alliance.Sub2Rank)
+					bf.WriteUint16(alliance.Sub2Members)
+					bf.WriteUint16(uint16(len(allianceSub2Name)))
+					bf.WriteBytes(allianceSub2Name)
+					bf.WriteUint16(uint16(len(allianceSub2Owner)))
+					bf.WriteBytes(allianceSub2Owner)
+				}
+			}
+		} else {
+			bf.WriteUint32(0) // No alliance
+		}
 
 		applicants, err := GetGuildMembers(s, guild.ID, true)
 
@@ -1591,8 +1697,10 @@ func handleMsgMhfRegistGuildCooking(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfLoadGuildAdventure(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfLoadGuildAdventure)
-	data := []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
-	doAckBufSucceed(s, pkt.AckHandle, data)
+	var r string
+	r += "0f0f0f0f0f0f0f0f"
+	//data, _ := hex.DecodeString(r)
+	doAckBufSucceed(s, pkt.AckHandle, make([]byte, 6))
 }
 
 func handleMsgMhfGetGuildWeeklyBonusMaster(s *Session, p mhfpacket.MHFPacket) {
@@ -1781,12 +1889,6 @@ func handleMsgMhfUpdateForceGuildRank(s *Session, p mhfpacket.MHFPacket) {}
 
 func handleMsgMhfAddGuildWeeklyBonusExceptionalUser(s *Session, p mhfpacket.MHFPacket) {}
 
-func handleMsgMhfRegistGuildAdventure(s *Session, p mhfpacket.MHFPacket) {}
-
-func handleMsgMhfAcquireGuildAdventure(s *Session, p mhfpacket.MHFPacket) {}
-
-func handleMsgMhfChargeGuildAdventure(s *Session, p mhfpacket.MHFPacket) {}
-
 func handleMsgMhfAddGuildMissionCount(s *Session, p mhfpacket.MHFPacket) {}
 
 func handleMsgMhfSetGuildMissionTarget(s *Session, p mhfpacket.MHFPacket) {}
@@ -1797,7 +1899,11 @@ func handleMsgMhfGenerateUdGuildMap(s *Session, p mhfpacket.MHFPacket) {}
 
 func handleMsgMhfUpdateGuild(s *Session, p mhfpacket.MHFPacket) {}
 
-func handleMsgMhfSetGuildManageRight(s *Session, p mhfpacket.MHFPacket) {}
+func handleMsgMhfSetGuildManageRight(s *Session, p mhfpacket.MHFPacket) {
+	pkt := p.(*mhfpacket.MsgMhfSetGuildManageRight)
+	// this still crashes the game
+	doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x01})
+}
 
 func handleMsgMhfEnumerateInvGuild(s *Session, p mhfpacket.MHFPacket) {}
 

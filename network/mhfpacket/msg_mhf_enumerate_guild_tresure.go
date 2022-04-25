@@ -1,7 +1,7 @@
 package mhfpacket
 
-import ( 
- "errors" 
+import (
+ "errors"
 
  	"github.com/Solenataris/Erupe/network/clientctx"
 	"github.com/Solenataris/Erupe/network"
@@ -11,7 +11,7 @@ import (
 // MsgMhfEnumerateGuildTresure represents the MSG_MHF_ENUMERATE_GUILD_TRESURE
 type MsgMhfEnumerateGuildTresure struct{
 	AckHandle      uint32
-	Unk0           uint16
+	Unk0           uint16 // opcode?
 	Unk1			     uint32
 }
 

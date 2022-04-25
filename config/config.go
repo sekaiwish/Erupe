@@ -31,12 +31,14 @@ type DevModeOptions struct {
 	LogOutboundMessages bool   // Log all messages sent to the clients
 	Event               int    // Changes the current event
 	OpcodeMessages      bool   // Get all message for Opcodes
+	OpcodeData          bool   // Print hex dumps for packet data
 	SaveDumps           SaveDumpOptions
 }
 
 type SaveDumpOptions struct {
 	Enabled   bool
 	OutputDir string
+	Raw       bool   // Save uncompressed savefiles seperately (_raw)
 }
 
 // Discord holds the discord integration config.

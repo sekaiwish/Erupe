@@ -2,6 +2,8 @@ package mhfpacket
 
 import (
  "errors"
+ "encoding/hex"
+ "fmt"
 
  	"github.com/Solenataris/Erupe/network/clientctx"
 	"github.com/Solenataris/Erupe/network"
@@ -43,6 +45,7 @@ func (m *MsgMhfEnumerateGuild) Parse(bf *byteframe.ByteFrame, ctx *clientctx.Cli
 	m.AckHandle = bf.ReadUint32()
 	m.Type = EnumerateGuildType(bf.ReadUint8())
 	m.RawDataPayload = bf.DataFromCurrent()
+  fmt.Println(hex.Dump(m.RawDataPayload))
   bf.Seek(int64(len(bf.Data()) - 2), 0)
 	return nil
 }

@@ -3,10 +3,10 @@ package channelserver
 import (
 	"fmt"
 	"math/rand"
-	"os"
+	//"os"
 	"io"
-   	"io/ioutil"
-    "path/filepath"
+   	//"io/ioutil"
+    //"path/filepath"
 
 
 	"github.com/Solenataris/Erupe/network/mhfpacket"
@@ -235,12 +235,14 @@ func handleMsgMhfSaveOtomoAirou(s *Session, p mhfpacket.MHFPacket) {
 func handleMsgMhfEnumerateAiroulist(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfEnumerateAiroulist)
 	resp := byteframe.NewByteFrame()
+	/*
 	if _, err := os.Stat(filepath.Join(s.server.erupeConfig.BinPath, "airoulist.bin")); err == nil {
 		data, _ := ioutil.ReadFile(filepath.Join(s.server.erupeConfig.BinPath, "airoulist.bin"))
 		resp.WriteBytes(data)
 		doAckBufSucceed(s, pkt.AckHandle, resp.Data())
 		return
 	}
+	*/
 
 	// Guild's Palico count. It seems we have to put the value on both ¯\_(ツ)_/¯
 	airouList := getGuildAirouList(s)
@@ -295,7 +297,7 @@ func getGuildAirouList(s *Session) []CatDefinition {
 	}
 
 	// ellie's GetGuildMembers didn't seem to pull leader?
-	rows, err := s.server.db.Query(`SELECT c.otomoairou, c.name 
+	rows, err := s.server.db.Query(`SELECT c.otomoairou, c.name
 	FROM characters c
 	INNER JOIN guild_characters gc
 	ON gc.character_id = c.id

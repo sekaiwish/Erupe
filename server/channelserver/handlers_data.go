@@ -54,6 +54,9 @@ func handleMsgMhfSavedata(s *Session, p mhfpacket.MHFPacket) {
 	}
 	s.logger.Info("Wrote recompressed savedata back to DB.")
 	dumpSaveData(s, pkt.RawDataPayload, "")
+	if s.server.erupeConfig.DevModeOptions.SaveDumps.Raw {
+		dumpSaveData(s, decompressedData, "_raw")
+	}
 	// Temporary server launcher response stuff
 	// 0x1F715	Weapon Class
 	// 0x1FDF6 HR (small_gr_level)

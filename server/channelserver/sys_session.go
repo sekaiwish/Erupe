@@ -177,6 +177,16 @@ func (s *Session) handlePacketGroup(pktGroup []byte) {
 			opcode != network.MSG_SYS_PING &&
 			opcode != network.MSG_SYS_NOP &&
 			opcode != network.MSG_SYS_TIME &&
+			opcode != network.MSG_MHF_SAVEDATA &&
+			opcode != network.MSG_MHF_SAVE_PARTNER &&
+			opcode != network.MSG_MHF_SAVE_SCENARIO_DATA &&
+			opcode != network.MSG_MHF_SAVE_FAVORITE_QUEST &&
+			opcode != network.MSG_MHF_SAVE_PLATE_BOX &&
+			opcode != network.MSG_MHF_SAVE_OTOMO_AIROU &&
+			opcode != network.MSG_MHF_SAVE_MERCENARY &&
+			opcode != network.MSG_MHF_SAVE_HUNTER_NAVI &&
+			opcode != network.MSG_MHF_UPDATE_GUILD_MESSAGE_BOARD &&
+			opcode != network.MSG_MHF_GET_KEEP_LOGIN_BOOST_STATUS &&
 			opcode != network.MSG_SYS_POSITION_OBJECT &&
 			opcode != network.MSG_SYS_EXTEND_THRESHOLD {
 			fmt.Printf("[%s] send to Server\n", s.Name)

@@ -6,6 +6,9 @@ ALTER TABLE characters
 ALTER TABLE guilds
     ADD COLUMN item_box bytea;
 
+ALTER TABLE guilds
+    DROP COLUMN guild_hall;
+
 CREATE TABLE guild_posts
 (
     id serial NOT NULL PRIMARY KEY,
@@ -19,4 +22,22 @@ CREATE TABLE guild_posts
     liked_by text NOT NULL DEFAULT ''
 );
 
+CREATE TABLE guild_alliances
+(
+    id serial NOT NULL PRIMARY KEY,
+    name varchar(24) NOT NULL,
+    created_at timestamp without time zone NOT NULL DEFAULT now(),
+    parent_id int NOT NULL,
+    sub1_id int,
+    sub2_id int
+);
+
 END;
+
+/*
+(SELECT id FROM guild_alliances ga WHERE
+	 	ga.parent_id = g.id OR
+	 	ga.sub1_id = g.id OR
+	 	ga.sub2_id = g.id
+	) AS alliance_id,
+*/

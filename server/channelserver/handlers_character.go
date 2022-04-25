@@ -123,7 +123,9 @@ func (save *CharacterSaveData) updateSaveDataWithStruct() {
 
 // This will update the character save struct with the values stored in the raw savedata arrays
 func (save *CharacterSaveData) updateStructWithSaveData() {
-	save.RP = binary.LittleEndian.Uint16(save.baseSaveData[CharacterSaveRPPointer : CharacterSaveRPPointer+2])
+	//save.RP = binary.LittleEndian.Uint16(save.baseSaveData[CharacterSaveRPPointer : CharacterSaveRPPointer+2])
+	// hack to always have 1000rp
+	save.RP = uint16(1000)
 }
 
 func handleMsgMhfSexChanger(s *Session, p mhfpacket.MHFPacket) {
