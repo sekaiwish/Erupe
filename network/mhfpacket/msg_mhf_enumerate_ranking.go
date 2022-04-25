@@ -13,11 +13,11 @@ type MsgMhfEnumerateRanking struct {
 	AckHandle uint32
 	Unk0      uint16 // Hardcoded 0 in the binary
 	Unk1      uint16 // Hardcoded 0 in the binary
-  // guild quest board
+  // guild quest board - other packet? maybe ignore
   // 00 42 00 7f  00 00 45 d0  e6 ee 42 c8  00 00 46 05  00 ee
   // winners quests
   // 00 00 00 00
-  UnkData []byte
+  //UnkData []byte
 }
 
 // Opcode returns the ID associated with this packet type.
@@ -31,8 +31,8 @@ func (m *MsgMhfEnumerateRanking) Parse(bf *byteframe.ByteFrame, ctx *clientctx.C
 	m.Unk0 = bf.ReadUint16()
 	m.Unk1 = bf.ReadUint16()
 
-  m.UnkData = bf.DataFromCurrent()
-  bf.Seek(int64(len(bf.Data()) - 2), 0)
+  //m.UnkData = bf.DataFromCurrent()
+  //bf.Seek(int64(len(bf.Data()) - 2), 0)
 	return nil
 }
 

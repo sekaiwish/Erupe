@@ -10,7 +10,7 @@ import (
 func handleMsgMhfInfoFesta(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfInfoFesta)
 	bf := byteframe.NewByteFrame()
-	FestaID := 0
+	FestaID := 1
 	// this code only works when event = 3
 	if FestaID > 0 {
 		bf.WriteUint32(1)
