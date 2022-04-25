@@ -1,7 +1,7 @@
 package mhfpacket
 
-import ( 
- "errors" 
+import (
+ "errors"
 
  	"github.com/Solenataris/Erupe/network/clientctx"
 	"github.com/Solenataris/Erupe/network"
@@ -13,6 +13,7 @@ type MsgMhfInfoFesta struct {
 	AckHandle uint32
 	Unk0      uint16 // Hardcoded 0 in the binary
 	Unk1      uint16 // Hardcoded 0 in the binary
+  // 00 0f 01 96 01 fe 00 2x  x=4/5
 }
 
 // Opcode returns the ID associated with this packet type.

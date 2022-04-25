@@ -22,7 +22,7 @@ func handleMsgMhfSetKiju(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfGetUdSchedule(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfGetUdSchedule)
-
+	var event int = s.server.erupeConfig.DevModeOptions.Event
 	// Events with time limits are Festival with Sign up, Soul Week and Winners Weeks
 	// Diva Defense with Prayer, Interception and Song weeks
 	// Mezeporta Festival with simply 'available' being a weekend thing
@@ -32,47 +32,35 @@ func handleMsgMhfGetUdSchedule(s *Session, p mhfpacket.MHFPacket) {
 	resp := byteframe.NewByteFrame()
 	resp.WriteUint32(0x0b5397df) // Unk (1d5fda5c, 0b5397df)
 
-	/*
-	resp.WriteUint32(uint32(midnight.Add(-24 * 21 * time.Hour).Unix()))
-	resp.WriteUint32(uint32(midnight.Add(-24 * 14 * time.Hour).Unix()))
-	resp.WriteUint32(uint32(midnight.Add(-24 * 7 * time.Hour).Unix()))
-	resp.WriteUint32(uint32(midnight.Unix()))
-	resp.WriteUint32(uint32(midnight.Add(24 * 7 * time.Hour).Unix()))
-	resp.WriteUint32(uint32(midnight.Add(24 * 14 * time.Hour).Unix()))
-	resp.WriteUint32(uint32(midnight.Add(24 * 21 * time.Hour).Unix()))
-	*/
-
-	resp.WriteUint32(uint32(midnight.Add(-24 * 14 * time.Hour).Unix())) // Week 1 Timestamp, Festi start?
-	resp.WriteUint32(uint32(midnight.Add(-24 * 7 * time.Hour).Unix())) // Week 2 Timestamp
-	resp.WriteUint32(uint32(midnight.Add(-24 * 7 * time.Hour).Unix())) // Week 2 Timestamp
-	resp.WriteUint32(uint32(midnight.Unix())) // Diva Defense Interception
-	resp.WriteUint32(uint32(midnight.Unix())) // Diva Defense Interception
-	resp.WriteUint32(uint32(midnight.Add(24 * 7 * time.Hour).Unix())) // Diva Defense Greeting Song
-
-
-	/*
 	if event == 1 {
-		resp.WriteUint32(uint32(midnight.Add(24 * 21 * time.Hour).Unix())) // Week 1 Timestamp, Festi start?
+		resp.WriteUint32(uint32(midnight.Unix()))
+		resp.WriteUint32(uint32(midnight.Add(24 * 7 * time.Hour).Unix()))
+		resp.WriteUint32(uint32(midnight.Add(24 * 7 * time.Hour).Unix()))
+		resp.WriteUint32(uint32(midnight.Add(24 * 14 * time.Hour).Unix()))
+		resp.WriteUint32(uint32(midnight.Add(24 * 14 * time.Hour).Unix()))
+		resp.WriteUint32(uint32(midnight.Add(24 * 21 * time.Hour).Unix()))
+	} else if event == 2 {
+		resp.WriteUint32(uint32(midnight.Add(-24 * 7 * time.Hour).Unix()))
+		resp.WriteUint32(uint32(midnight.Unix()))
+		resp.WriteUint32(uint32(midnight.Unix()))
+		resp.WriteUint32(uint32(midnight.Add(24 * 7 * time.Hour).Unix()))
+		resp.WriteUint32(uint32(midnight.Add(24 * 7 * time.Hour).Unix()))
+		resp.WriteUint32(uint32(midnight.Add(24 * 14 * time.Hour).Unix()))
+	} else if event == 3 {
+		resp.WriteUint32(uint32(midnight.Add(-24 * 14 * time.Hour).Unix()))
+		resp.WriteUint32(uint32(midnight.Add(-24 * 7 * time.Hour).Unix()))
+		resp.WriteUint32(uint32(midnight.Add(-24 * 7 * time.Hour).Unix()))
+		resp.WriteUint32(uint32(midnight.Unix()))
+		resp.WriteUint32(uint32(midnight.Unix()))
+		resp.WriteUint32(uint32(midnight.Add(24 * 7 * time.Hour).Unix()))
 	} else {
-		resp.WriteUint32(uint32(midnight.Add(-24 * 21 * time.Hour).Unix())) // Week 1 Timestamp, Festi start?
+		resp.WriteUint32(uint32(midnight.Add(-24 * 21 * time.Hour).Unix()))
+		resp.WriteUint32(uint32(midnight.Add(-24 * 14 * time.Hour).Unix()))
+		resp.WriteUint32(uint32(midnight.Add(-24 * 14 * time.Hour).Unix()))
+		resp.WriteUint32(uint32(midnight.Add(-24 * 7 * time.Hour).Unix()))
+		resp.WriteUint32(uint32(midnight.Add(-24 * 7 * time.Hour).Unix()))
+		resp.WriteUint32(uint32(midnight.Unix()))
 	}
-
-	if event == 2 {
-		resp.WriteUint32(uint32(midnight.Add(24 * 14 * time.Hour).Unix())) // Week 2 Timestamp
-		resp.WriteUint32(uint32(midnight.Add(24 * 14 * time.Hour).Unix())) // Week 2 Timestamp
-	} else {
-		resp.WriteUint32(uint32(midnight.Add(-24 * 14 * time.Hour).Unix())) // Week 2 Timestamp
-		resp.WriteUint32(uint32(midnight.Add(-24 * 14 * time.Hour).Unix())) // Week 2 Timestamp
-	}
-
-	if event == 3 {
-		resp.WriteUint32(uint32(midnight.Add((24) * 7 * time.Hour).Unix()))  // Diva Defense Interception
-		resp.WriteUint32(uint32(midnight.Add((24) * 14 * time.Hour).Unix())) // Diva Defense Greeting Song
-	} else {
-		resp.WriteUint32(uint32(midnight.Add((-24) * 7 * time.Hour).Unix()))  // Diva Defense Interception
-		resp.WriteUint32(uint32(midnight.Add((-24) * 14 * time.Hour).Unix())) // Diva Defense Greeting Song
-	}
-	*/
 
 	resp.WriteUint16(0x0019) // Unk 00000000 00011001
 	resp.WriteUint16(0x002d) // Unk 00000000 00101101

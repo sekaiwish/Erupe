@@ -10,31 +10,37 @@ import (
 func handleMsgMhfInfoFesta(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfInfoFesta)
 	bf := byteframe.NewByteFrame()
-	bf.WriteUint32(1) // Festa ID? 0 for no festa
+	FestaID := 0
+	// this code only works when event = 3
+	if FestaID > 0 {
+		bf.WriteUint32(1)
 
-	bf.WriteUint32(0)
-	bf.WriteUint32(0)
-	bf.WriteUint32(0)
-	bf.WriteUint32(0)
+		bf.WriteUint32(0)
+		bf.WriteUint32(0)
+		bf.WriteUint32(0)
+		bf.WriteUint32(0)
 
-	// festa state
-	bf.WriteUint8(0xff)
-	bf.WriteUint8(0xff)
-	bf.WriteUint8(0x00)
-	bf.WriteUint8(0x00)
+		// festa state
+		bf.WriteUint8(0xff)
+		bf.WriteUint8(0xff)
+		bf.WriteUint8(0x00)
+		bf.WriteUint8(0x00)
 
-	bf.WriteUint8(0xff)
-	bf.WriteUint8(0xff)
-	bf.WriteUint8(0x00)
-	bf.WriteUint8(0x00)
+		bf.WriteUint8(0xff)
+		bf.WriteUint8(0xff)
+		bf.WriteUint8(0x00)
+		bf.WriteUint8(0x00)
 
-	i := 0
-	bf.WriteUint16(uint16(i))
-	bf.WriteBytes(make([]byte, i))
-	bf.WriteUint32(0)
-	bf.WriteUint32(1) // Blue souls
-	bf.WriteUint32(1) // Red souls
-	bf.WriteUint16(0)
+		i := 0
+		bf.WriteUint16(uint16(i))
+		bf.WriteBytes(make([]byte, i))
+		bf.WriteUint32(0)
+		bf.WriteUint32(1) // Blue souls
+		bf.WriteUint32(1) // Red souls
+		bf.WriteUint16(0)
+	} else {
+		bf.WriteUint32(0)
+	}
 
 	doAckBufSucceed(s, pkt.AckHandle, bf.Data())
 }
