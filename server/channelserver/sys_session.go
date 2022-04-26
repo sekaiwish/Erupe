@@ -32,6 +32,7 @@ type Session struct {
 	reservationStage *Stage // Required for the stateful MsgSysUnreserveStage packet.
 	charID           uint32
 	logKey           []byte
+	sessionStart     int64
 	rights           uint32
 
 	semaphore *Semaphore // Required for the stateful MsgSysUnreserveStage packet.
@@ -63,6 +64,7 @@ func NewSession(server *Server, conn net.Conn) *Session {
 				Encoding: japanese.ShiftJIS,
 			},
 		},
+		sessionStart: Time_Current_Adjusted().Unix(),
 		// 0e with normal sub 4e when having premium it's probably a bitfield?
 		// 01 = Character can take quests at allows
 		// 02 = Hunter Life, normal quests core sub

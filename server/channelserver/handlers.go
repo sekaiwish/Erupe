@@ -182,6 +182,41 @@ func logoutPlayer(s *Session) {
 	}
 
 	removeSessionFromStage(s)
+
+	var timePlayed int
+	err := s.server.db.QueryRow("SELECT time_played FROM characters WHERE id = $1", s.charID).Scan(&timePlayed)
+
+	timePlayed = (int(Time_Current_Adjusted().Unix()) - int(s.sessionStart)) + timePlayed
+
+	multiplier := 1
+	var rpGained int
+
+	if s.rights == 0x08091e4e || s.rights == 0x08091e0e { // N Course
+		rpGained = timePlayed / 900 * multiplier
+		timePlayed = timePlayed % 900
+	} else {
+		rpGained = timePlayed / 1800 * multiplier
+		timePlayed = timePlayed % 1800
+	}
+
+	_, err = s.server.db.Exec("UPDATE characters SET time_played = $1 WHERE id = $2", timePlayed, s.charID)
+	if err != nil {
+		panic(err)
+	}
+
+	saveData, err := GetCharacterSaveData(s, s.charID)
+	if err != nil {
+		panic(err)
+	}
+	saveData.RP += uint16(rpGained)
+	transaction, err := s.server.db.Begin()
+	err = saveData.Save(s, transaction)
+	if err != nil {
+		transaction.Rollback()
+		panic(err)
+	} else {
+		transaction.Commit()
+	}
 }
 
 func handleMsgSysSetStatus(s *Session, p mhfpacket.MHFPacket) {}
