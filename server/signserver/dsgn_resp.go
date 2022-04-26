@@ -2,6 +2,8 @@ package signserver
 
 import (
 	"fmt"
+	"math/rand"
+	"time"
 
 	"github.com/Andoryuuta/byteframe"
 	"go.uber.org/zap"
@@ -32,12 +34,25 @@ func makeSignInFailureResp(respID RespID) []byte {
 	return bf.Data()
 }
 
+func randSeq(n int) string {
+	var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+	b := make([]rune, n)
+	for i := range b {
+		b[i] = letters[rand.Intn(len(letters))]
+	}
+	return string(b)
+}
+
 func (s *Session) makeSignInResp(uid int) []byte {
 	// Get the characters from the DB.
 	chars, err := s.server.getCharactersForUser(uid)
 	if err != nil {
 		s.logger.Warn("Error getting characters from DB", zap.Error(err))
 	}
+
+	rand.Seed(time.Now().UnixNano())
+	token := randSeq(15)
+	// TODO: register token to db, users table
 
 	bf := byteframe.NewByteFrame()
 
@@ -46,7 +61,7 @@ func (s *Session) makeSignInResp(uid int) []byte {
 	bf.WriteUint8(4)                                   // entrance server count
 	bf.WriteUint8(uint8(len(chars)))                   // character count
 	bf.WriteUint32(0xFFFFFFFF)                         // login_token_number
-	bf.WriteBytes(paddedString("logintokenstrng", 16)) // login_token (16 byte padded string)
+	bf.WriteBytes(paddedString(token, 16)) // login_token (16 byte padded string)
 	bf.WriteUint32(1576761190)
 	uint8PascalString(bf, fmt.Sprintf("%s:%d", s.server.erupeConfig.HostIP, s.server.erupeConfig.Entrance.Port))
 	uint8PascalString(bf, "")
