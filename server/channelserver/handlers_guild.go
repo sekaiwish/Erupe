@@ -67,8 +67,12 @@ type GuildLeader struct {
 type GuildIconPart struct {
 	Index    uint16
 	ID       uint16
+	Page     uint8
 	Size     uint8
 	Rotation uint8
+	Red      uint8
+	Green    uint8
+	Blue     uint8
 	PosX     uint16
 	PosY     uint16
 }
@@ -1147,11 +1151,12 @@ func handleMsgMhfInfoGuild(s *Session, p mhfpacket.MHFPacket) {
 			for _, p := range guild.Icon.Parts {
 				bf.WriteUint16(p.Index)
 				bf.WriteUint16(p.ID)
-				bf.WriteUint8(0x01)
+				bf.WriteUint8(p.Page)
 				bf.WriteUint8(p.Size)
 				bf.WriteUint8(p.Rotation)
-				bf.WriteUint8(0xFF)
-				bf.WriteUint16(0xFFFF)
+				bf.WriteUint8(p.Red)
+				bf.WriteUint8(p.Green)
+				bf.WriteUint8(p.Blue)
 				bf.WriteUint16(p.PosX)
 				bf.WriteUint16(p.PosY)
 			}
@@ -1619,8 +1624,12 @@ func handleMsgMhfUpdateGuildIcon(s *Session, p mhfpacket.MHFPacket) {
 		icon.Parts[i] = GuildIconPart{
 			Index:    p.Index,
 			ID:       p.ID,
+			Page:     p.Page,
 			Size:     p.Size,
 			Rotation: p.Rotation,
+			Red:      p.Red,
+			Green:    p.Green,
+			Blue:     p.Blue,
 			PosX:     p.PosX,
 			PosY:     p.PosY,
 		}
