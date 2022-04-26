@@ -1,10 +1,15 @@
 BEGIN;
 
 ALTER TABLE characters
-    ADD COLUMN guild_post_checked int NOT NULL DEFAULT CAST(EXTRACT(epoch FROM now()) AS int);
+    ADD COLUMN guild_post_checked int NOT NULL DEFAULT CAST(EXTRACT(epoch FROM now()) AS int)
+    ADD COLUMN time_played int NOT NULL DEFAULT 0;
 
 ALTER TABLE guilds
-    ADD COLUMN item_box bytea;
+    ADD COLUMN item_box bytea,
+    ADD COLUMN event_rp int NOT NULL DEFAULT 0;
+
+ALTER TABLE guilds
+    RENAME COLUMN rp TO rank_rp;
 
 ALTER TABLE guilds
     DROP COLUMN guild_hall;
@@ -33,11 +38,3 @@ CREATE TABLE guild_alliances
 );
 
 END;
-
-/*
-(SELECT id FROM guild_alliances ga WHERE
-	 	ga.parent_id = g.id OR
-	 	ga.sub1_id = g.id OR
-	 	ga.sub2_id = g.id
-	) AS alliance_id,
-*/
