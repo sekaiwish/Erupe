@@ -20,11 +20,11 @@ SELECT
 		SELECT count(1) FROM guild_characters pggc WHERE pggc.guild_id = parent_id
 	) AS parent_members,
 	CASE
-		WHEN pg.rp <= 48 THEN pg.rp/24
-		WHEN pg.rp <= 288 THEN pg.rp/48+1
-		WHEN pg.rp <= 504 THEN pg.rp/72+3
-		WHEN pg.rp <= 1080 THEN (pg.rp-24)/96+5
-		WHEN pg.rp < 1200 THEN 16
+		WHEN pg.rank_rp <= 48 THEN pg.rank_rp/24
+		WHEN pg.rank_rp <= 288 THEN pg.rank_rp/48+1
+		WHEN pg.rank_rp <= 504 THEN pg.rank_rp/72+3
+		WHEN pg.rank_rp <= 1080 THEN (pg.rank_rp-24)/96+5
+		WHEN pg.rank_rp < 1200 THEN 16
 		ELSE 17
 	END parent_rank,
 	CASE
@@ -43,12 +43,12 @@ SELECT
 		SELECT count(1) FROM guild_characters s1gc WHERE s1gc.guild_id = sub1_id
 	) AS sub1_members,
 	CASE
-		WHEN s1.rp IS NULL then 0
-		WHEN s1.rp <= 48 THEN s1.rp/24
-		WHEN s1.rp <= 288 THEN s1.rp/48+1
-		WHEN s1.rp <= 504 THEN s1.rp/72+3
-		WHEN s1.rp <= 1080 THEN (s1.rp-24)/96+5
-		WHEN s1.rp < 1200 THEN 16
+		WHEN s1.rank_rp IS NULL then 0
+		WHEN s1.rank_rp <= 48 THEN s1.rank_rp/24
+		WHEN s1.rank_rp <= 288 THEN s1.rank_rp/48+1
+		WHEN s1.rank_rp <= 504 THEN s1.rank_rp/72+3
+		WHEN s1.rank_rp <= 1080 THEN (s1.rank_rp-24)/96+5
+		WHEN s1.rank_rp < 1200 THEN 16
 		ELSE 17
 	END sub1_rank,
 	CASE
@@ -67,12 +67,12 @@ SELECT
 		SELECT count(1) FROM guild_characters s2gc WHERE s2gc.guild_id = sub2_id
 	) AS sub2_members,
 	CASE
-		WHEN s2.rp IS NULL then 0
-		WHEN s2.rp <= 48 THEN s2.rp/24
-		WHEN s2.rp <= 288 THEN s2.rp/48+1
-		WHEN s2.rp <= 504 THEN s2.rp/72+3
-		WHEN s2.rp <= 1080 THEN (s2.rp-24)/96+5
-		WHEN s2.rp < 1200 THEN 16
+		WHEN s2.rank_rp IS NULL then 0
+		WHEN s2.rank_rp <= 48 THEN s2.rank_rp/24
+		WHEN s2.rank_rp <= 288 THEN s2.rank_rp/48+1
+		WHEN s2.rank_rp <= 504 THEN s2.rank_rp/72+3
+		WHEN s2.rank_rp <= 1080 THEN (s2.rank_rp-24)/96+5
+		WHEN s2.rank_rp < 1200 THEN 16
 		ELSE 17
 	END sub2_rank
 	FROM guild_alliances ga
@@ -139,7 +139,36 @@ func handleMsgMhfCreateJoint(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfOperateJoint(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfOperateJoint)
-	doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
+
+	guild, err := GetGuildInfoByID(s, pkt.GuildID)
+	if err != nil {
+		s.logger.Fatal("Failed to get guild info", zap.Error(err))
+	}
+	alliance, err := GetAllianceData(s, pkt.AllianceID)
+	if err != nil {
+		s.logger.Fatal("Failed to get alliance info", zap.Error(err))
+	}
+
+	_ = guild
+
+	switch pkt.Action {
+		case mhfpacket.OPERATE_JOINT_DISBAND:
+			if guild.LeaderCharID == s.charID && alliance.ParentID == guild.ID {
+				_, err = s.server.db.Exec("DELETE FROM guild_alliances WHERE id=$1", alliance.ID)
+				if err != nil {
+					s.logger.Fatal("Failed to disband alliance", zap.Error(err))
+				}
+				doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
+			} else {
+				s.logger.Warn(
+					"Non-owner of alliance attempted disband",
+					zap.Uint32("CharID", s.charID),
+					zap.Uint32("AllyID", alliance.ID),
+				)
+				doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
+			}
+	}
+	return
 }
 
 func handleMsgMhfInfoJoint(s *Session, p mhfpacket.MHFPacket) {}
