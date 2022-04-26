@@ -32,6 +32,7 @@ type Session struct {
 	reservationStage *Stage // Required for the stateful MsgSysUnreserveStage packet.
 	charID           uint32
 	logKey           []byte
+	rights           uint32
 
 	semaphore *Semaphore // Required for the stateful MsgSysUnreserveStage packet.
 
@@ -62,6 +63,17 @@ func NewSession(server *Server, conn net.Conn) *Session {
 				Encoding: japanese.ShiftJIS,
 			},
 		},
+		// 0e with normal sub 4e when having premium it's probably a bitfield?
+		// 01 = Character can take quests at allows
+		// 02 = Hunter Life, normal quests core sub
+		// 03 = Extra Course, extra quests, town boxes, QOL course, core sub
+		// 06 = Premium Course, standard 'premium' which makes ranking etc. faster
+		// some connection to unk1 above for these maybe?
+		// 06 0A 0B = Boost Course, just actually 3 subs combined
+		// 08 09 1E = N Course, gives you the benefits of being in a netcafe (extra quests, N Points, daily freebies etc.) minimal and pointless
+		// no timestamp after 08 or 1E while active
+		// 0C = N Boost course, ultra luxury course that ruins the game if in use but also gives a
+		rights: 0x08091e4e,
 		stageMoveStack: stringstack.New(),
 	}
 	return s

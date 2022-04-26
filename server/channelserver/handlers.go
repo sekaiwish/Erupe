@@ -6,7 +6,7 @@ import (
 	"io/ioutil"
 	"math/bits"
 	"math/rand"
-        "fmt"
+  "fmt"
 	"time"
 
 	"github.com/Andoryuuta/byteframe"
@@ -74,16 +74,7 @@ func doAckSimpleFail(s *Session, ackHandle uint32, data []byte) {
 func updateRights(s *Session) {
 	update := &mhfpacket.MsgSysUpdateRight{
 		ClientRespAckHandle: 0,
-		Unk1:                0x08091e4e, //0e with normal sub 4e when having premium it's probably a bitfield?
-		// 01 = Character can take quests at allows
-		// 02 = Hunter Life, normal quests core sub
-		// 03 = Extra Course, extra quests, town boxes, QOL course, core sub
-		// 06 = Premium Course, standard 'premium' which makes ranking etc. faster
-		// some connection to unk1 above for these maybe?
-		// 06 0A 0B = Boost Course, just actually 3 subs combined
-		// 08 09 1E = N Course, gives you the benefits of being in a netcafe (extra quests, N Points, daily freebies etc.) minimal and pointless
-		// no timestamp after 08 or 1E while active
-		// 0C = N Boost course, ultra luxury course that ruins the game if in use but also gives a
+		Unk1:                s.rights,
 		Rights: []mhfpacket.ClientRight{
 			{
 				ID:        1,
