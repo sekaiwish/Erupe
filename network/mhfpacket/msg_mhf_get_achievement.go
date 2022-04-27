@@ -11,7 +11,7 @@ import (
 // MsgMhfGetAchievement represents the MSG_MHF_GET_ACHIEVEMENT
 type MsgMhfGetAchievement struct{
 	AckHandle      uint32
-	Unk0           uint16 // id?
+	Unk0           uint32 // id?
 	Unk1           uint32 // char?
 }
 
