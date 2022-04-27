@@ -32,17 +32,16 @@ func handleMsgMhfSavedata(s *Session, p mhfpacket.MHFPacket) {
 			s.logger.Fatal("Failed to decompress diff", zap.Error(err))
 		}
 		// Perform diff.
-		characterSaveData.SetBaseSaveData(deltacomp.ApplyDataDiff(diff, characterSaveData.BaseSaveData()))
 		s.logger.Info("Diffing...")
+		characterSaveData.SetBaseSaveData(deltacomp.ApplyDataDiff(diff, characterSaveData.BaseSaveData()))
 	} else {
 		// Regular blob update.
 		saveData, err := nullcomp.Decompress(pkt.RawDataPayload)
-
-		characterSaveData.SetBaseSaveData(saveData)
 		if err != nil {
 			s.logger.Fatal("Failed to decompress savedata from packet", zap.Error(err))
 		}
 		s.logger.Info("Updating save with blob")
+		characterSaveData.SetBaseSaveData(saveData)
 	}
 	characterSaveData.IsNewCharacter = false
 	characterBaseSaveData := characterSaveData.BaseSaveData()
@@ -58,17 +57,12 @@ func handleMsgMhfSavedata(s *Session, p mhfpacket.MHFPacket) {
 	if s.server.erupeConfig.DevModeOptions.SaveDumps.Raw {
 		dumpSaveData(s, decompressedData, "_raw")
 	}
-	// Temporary server launcher response stuff
-	// 0x1F715	Weapon Class
-	// 0x1FDF6 HR (small_gr_level)
-	// 0x88 Character Name
 	_, err = s.server.db.Exec("UPDATE characters SET weapon=$1 WHERE id=$2", uint16(decompressedData[128789]), s.charID)
 	if err != nil {
 		s.logger.Fatal("Failed to character weapon in db", zap.Error(err))
 	}
 
 	hrp := binary.LittleEndian.Uint16(decompressedData[130550:130552]) // 0x1FDF6
-	s.logger.Info("Setting db field", zap.Uint16("hrp", hrp))
 	_, err = s.server.db.Exec("UPDATE characters SET hrp=$1 WHERE id=$2", hrp, s.charID)
 	if err != nil {
 		s.logger.Fatal("Failed to update character hrp in db", zap.Error(err))
@@ -81,7 +75,6 @@ func handleMsgMhfSavedata(s *Session, p mhfpacket.MHFPacket) {
 	} else {
 		gr = 0
 	}
-	s.logger.Info("Setting db field", zap.Uint16("gr", gr))
 	_, err = s.server.db.Exec("UPDATE characters SET gr=$1 WHERE id=$2", gr, s.charID)
 	if err != nil {
 		s.logger.Fatal("Failed to update character gr in db", zap.Error(err))
