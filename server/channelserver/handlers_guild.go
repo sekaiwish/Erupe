@@ -912,10 +912,12 @@ func handleMsgMhfInfoGuild(s *Session, p mhfpacket.MHFPacket) {
 
 		if characterGuildData == nil || characterGuildData.IsApplicant {
 			bf.WriteUint16(0x00)
-		} else if characterGuildData.IsSubLeader() || guild.LeaderCharID == s.charID {
+		} else if guild.LeaderCharID == s.charID {
 			bf.WriteUint16(0x01)
-		} else {
+		} else if characterGuildData.IsSubLeader() {
 			bf.WriteUint16(0x02)
+		} else {
+			bf.WriteUint16(0x00)
 		}
 
 		leaderName := s.clientContext.StrConv.MustEncode(guild.LeaderName)
@@ -1314,12 +1316,10 @@ func handleMsgMhfEnumerateGuildMember(s *Session, p mhfpacket.MHFPacket) {
 		name := s.clientContext.StrConv.MustEncode(member.Name)
 
 		bf.WriteUint32(member.CharID)
-
-		// Exp, HR[x] is split by 0, 1, 30, 50, 99, 299, 998, 999
-		bf.WriteUint16(member.HRP) // Rank flags
-		bf.WriteUint16(member.GR)       // Grank
-		bf.WriteUint16(0x00)       // Unk
-		bf.WriteUint16(0x00)       // Some rank?
+		bf.WriteUint16(member.HRP)
+		bf.WriteUint16(member.GR)
+		bf.WriteUint16(0x0000)       // Unk
+		bf.WriteUint16(0x0000)       // Some rank?
 		bf.WriteUint8(member.OrderIndex)
 		bf.WriteUint16(uint16(len(name) + 1))
 		bf.WriteNullTerminatedBytes(name)
@@ -1332,7 +1332,7 @@ func handleMsgMhfEnumerateGuildMember(s *Session, p mhfpacket.MHFPacket) {
 	bf.WriteBytes([]byte{0x00, 0x00}) // Unk, might be to do with alliance, 0x00 == no alliance
 
 	for range guildMembers {
-		bf.WriteUint32(0x00) // Unk
+		bf.WriteUint32(0x00000000) // Unk
 	}
 
 	doAckBufSucceed(s, pkt.AckHandle, bf.Data())
@@ -1348,8 +1348,8 @@ func handleMsgMhfGetGuildManageRight(s *Session, p mhfpacket.MHFPacket) {
 		return
 	} else if guild == nil {
 		bf := byteframe.NewByteFrame()
-		bf.WriteUint16(0x00) // Unk
-		bf.WriteUint16(0x00) // Member count
+		bf.WriteUint16(0) // Unk
+		bf.WriteUint16(0) // Member count
 
 		doAckBufSucceed(s, pkt.AckHandle, bf.Data())
 		return
@@ -1357,14 +1357,14 @@ func handleMsgMhfGetGuildManageRight(s *Session, p mhfpacket.MHFPacket) {
 
 	bf := byteframe.NewByteFrame()
 
-	bf.WriteUint16(0x00) // Unk
+	bf.WriteUint16(0x0000) // Unk
 	bf.WriteUint16(guild.MemberCount)
 
 	members, _ := GetGuildMembers(s, guild.ID, false)
 
 	for _, member := range members {
 		bf.WriteUint32(member.CharID)
-		bf.WriteUint32(0x0)
+		bf.WriteUint32(0x00000000)
 	}
 
 	doAckBufSucceed(s, pkt.AckHandle, bf.Data())

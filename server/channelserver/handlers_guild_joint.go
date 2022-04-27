@@ -149,8 +149,6 @@ func handleMsgMhfOperateJoint(s *Session, p mhfpacket.MHFPacket) {
 		s.logger.Fatal("Failed to get alliance info", zap.Error(err))
 	}
 
-	_ = guild
-
 	switch pkt.Action {
 		case mhfpacket.OPERATE_JOINT_DISBAND:
 			if guild.LeaderCharID == s.charID && alliance.ParentID == guild.ID {
@@ -164,6 +162,17 @@ func handleMsgMhfOperateJoint(s *Session, p mhfpacket.MHFPacket) {
 					"Non-owner of alliance attempted disband",
 					zap.Uint32("CharID", s.charID),
 					zap.Uint32("AllyID", alliance.ID),
+				)
+				doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
+			}
+		case mhfpacket.OPERATE_JOINT_LEAVE:
+			if guild.LeaderCharID == s.charID {
+				// delete alliance application
+				// or leave alliance
+			} else {
+				s.logger.Warn(
+					"Non-owner of guild attempted alliance leave",
+					zap.Uint32("CharID", s.charID),
 				)
 				doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
 			}
