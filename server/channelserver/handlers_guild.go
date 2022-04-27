@@ -423,10 +423,8 @@ func CreateGuild(s *Session, guildName string) (int32, error) {
 	}
 
 	guildResult, err := transaction.Query(
-		// TODO: ideally, there would be a way to get the RP required in-game.
-		// this is a workaround for now.
-		"INSERT INTO guilds (name, leader_id, rank_rp) VALUES ($1, $2, $3) RETURNING id",
-		guildName, s.charID, 1200,
+		"INSERT INTO guilds (name, leader_id) VALUES ($1, $2) RETURNING id",
+		guildName, s.charID,
 	)
 
 	if err != nil {
