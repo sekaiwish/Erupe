@@ -75,24 +75,18 @@ func (s *Session) makeSignInResp(uid int) []byte {
 		if s.server.erupeConfig.DevMode && s.server.erupeConfig.DevModeOptions.MaxLauncherHR {
 			bf.WriteUint16(999)
 		} else {
-			bf.WriteUint16(char.Exp)
+			bf.WriteUint16(char.HRP)
 		}
-
 		bf.WriteUint16(char.Weapon)                         // Weapon, 0-13.
 		bf.WriteUint32(char.LastLogin)                      // Last login date, unix timestamp in seconds.
 		bf.WriteBool(char.IsFemale)                         // Sex, 0=male, 1=female.
 		bf.WriteBool(char.IsNewCharacter)                   // Is new character, 1 replaces character name with ?????.
-		bf.WriteUint8(char.SmallGRLevel)                    // GR level if grMode == 0
-		bf.WriteBool(char.GROverrideMode)                   // GR mode.
+		bf.WriteUint8(0)                                    // Old GR
+		bf.WriteBool(true)                                  // Use uint16 GR, no reason not to
 		bf.WriteBytes(paddedString(char.Name, 16))          // Character name
 		bf.WriteBytes(paddedString(char.UnkDescString, 32)) // unk str
-		if char.GROverrideMode {
-			bf.SetLE()
-			bf.WriteUint16(char.GROverrideLevel) // GR level override.
-			bf.SetBE()
-			bf.WriteUint8(char.GROverrideUnk0)   // unk
-			bf.WriteUint8(char.GROverrideUnk1)   // unk
-		}
+		bf.WriteUint16(char.GR)
+		bf.WriteUint16(0) // Unk
 	}
 
 	bf.WriteUint8(0)           // friends_list_count

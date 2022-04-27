@@ -1318,8 +1318,8 @@ func handleMsgMhfEnumerateGuildMember(s *Session, p mhfpacket.MHFPacket) {
 		bf.WriteUint32(member.CharID)
 
 		// Exp, HR[x] is split by 0, 1, 30, 50, 99, 299, 998, 999
-		bf.WriteUint16(member.Exp) // Rank flags
-		bf.WriteUint16(0x00)       // Grank
+		bf.WriteUint16(member.HRP) // Rank flags
+		bf.WriteUint16(member.GR)       // Grank
 		bf.WriteUint16(0x00)       // Unk
 		bf.WriteUint16(0x00)       // Some rank?
 		bf.WriteUint8(member.OrderIndex)
