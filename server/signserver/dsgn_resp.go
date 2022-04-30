@@ -77,7 +77,7 @@ func (s *Session) makeSignInResp(uid int) []byte {
 		} else {
 			bf.WriteUint16(char.HRP)
 		}
-		bf.WriteUint16(char.Weapon)                         // Weapon, 0-13.
+		bf.WriteUint16(char.WeaponType)                     // Weapon, 0-13.
 		bf.WriteUint32(char.LastLogin)                      // Last login date, unix timestamp in seconds.
 		bf.WriteBool(char.IsFemale)                         // Sex, 0=male, 1=female.
 		bf.WriteBool(char.IsNewCharacter)                   // Is new character, 1 replaces character name with ?????.

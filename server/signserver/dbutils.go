@@ -81,13 +81,13 @@ type character struct {
 	UnkDescString   string `db:"unk_desc_string"`
 	HRP             uint16 `db:"hrp"`
 	GR              uint16 `db:"gr"`
-	Weapon          uint16 `db:"weapon"`
+	WeaponType      uint16 `db:"weapon_type"`
 	LastLogin       uint32 `db:"last_login"`
 }
 
 func (s *Server) getCharactersForUser(uid int) ([]character, error) {
 	characters := []character{}
-	err := s.db.Select(&characters, "SELECT id, is_female, is_new_character, name, unk_desc_string, hrp, gr, weapon, last_login FROM characters WHERE user_id = $1", uid)
+	err := s.db.Select(&characters, "SELECT id, is_female, is_new_character, name, unk_desc_string, hrp, gr, weapon_type, last_login FROM characters WHERE user_id = $1", uid)
 	if err != nil {
 		return nil, err
 	}

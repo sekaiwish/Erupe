@@ -57,9 +57,16 @@ func handleMsgMhfSavedata(s *Session, p mhfpacket.MHFPacket) {
 	if s.server.erupeConfig.DevModeOptions.SaveDumps.Raw {
 		dumpSaveData(s, decompressedData, "_raw")
 	}
-	_, err = s.server.db.Exec("UPDATE characters SET weapon=$1 WHERE id=$2", uint16(decompressedData[128789]), s.charID)
+
+	_, err = s.server.db.Exec("UPDATE characters SET weapon_type=$1 WHERE id=$2", uint16(decompressedData[128789]), s.charID)
 	if err != nil {
-		s.logger.Fatal("Failed to character weapon in db", zap.Error(err))
+		s.logger.Fatal("Failed to character weapon type in db", zap.Error(err))
+	}
+
+	weaponId := binary.LittleEndian.Uint16(decompressedData[128522:128524]) // 0x1F60A
+	_, err = s.server.db.Exec("UPDATE characters SET weapon_id=$1 WHERE id=$2", weaponId, s.charID)
+	if err != nil {
+		s.logger.Fatal("Failed to character weapon id in db", zap.Error(err))
 	}
 
 	hrp := binary.LittleEndian.Uint16(decompressedData[130550:130552]) // 0x1FDF6

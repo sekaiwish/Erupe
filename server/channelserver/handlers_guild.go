@@ -1316,8 +1316,12 @@ func handleMsgMhfEnumerateGuildMember(s *Session, p mhfpacket.MHFPacket) {
 		bf.WriteUint32(member.CharID)
 		bf.WriteUint16(member.HRP)
 		bf.WriteUint16(member.GR)
-		bf.WriteUint16(0x0000)       // Unk
-		bf.WriteUint16(0x0000)       // Some rank?
+		bf.WriteUint16(member.WeaponID)
+		if member.WeaponType == 1 || member.WeaponType == 5 || member.WeaponType == 10 { // If weapon is ranged
+			bf.WriteUint16(0x0700)
+		} else {
+			bf.WriteUint16(0x0600)
+		}
 		bf.WriteUint8(member.OrderIndex)
 		bf.WriteUint16(uint16(len(name) + 1))
 		bf.WriteNullTerminatedBytes(name)

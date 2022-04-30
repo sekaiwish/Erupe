@@ -1,8 +1,9 @@
 BEGIN;
 
 ALTER TABLE characters
-    ADD COLUMN guild_post_checked int NOT NULL DEFAULT CAST(EXTRACT(epoch FROM now()) AS int)
-    ADD COLUMN time_played int NOT NULL DEFAULT 0;
+    ADD COLUMN guild_post_checked int NOT NULL DEFAULT CAST(EXTRACT(epoch FROM now()) AS int),
+    ADD COLUMN time_played int NOT NULL DEFAULT 0,
+    ADD COLUMN weapon_id int NOT NULL DEFAULT 0;
 
 ALTER TABLE characters
     DROP COLUMN gr_override_mode,
@@ -15,6 +16,9 @@ ALTER TABLE characters
 
 ALTER TABLE characters
     RENAME COLUMN exp TO hrp;
+
+ALTER TABLE characters
+    RENAME COLUMN weapon TO weapon_type;
 
 ALTER TABLE guilds
     ADD COLUMN item_box bytea,
