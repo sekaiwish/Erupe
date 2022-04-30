@@ -31,11 +31,13 @@ func handleMsgSysCreateAcquireSemaphore(s *Session, p mhfpacket.MHFPacket) {
 	if !gotNewStage {
 		s.server.semaphoreLock.Lock()
 		if SemaphoreID == "hs_l0u3B51J9k1" ||
-			SemaphoreID == "hs_l0u3B51J9k2" ||
-			SemaphoreID == "hs_l0u3B51J9k3" ||
-			SemaphoreID == "hs_l0u3B51J9k4" ||
-			SemaphoreID == "hs_l0u3B51J9k5" {
+			 SemaphoreID == "hs_l0u3B51J9k2" ||
+			 SemaphoreID == "hs_l0u3B51J9k3" ||
+			 SemaphoreID == "hs_l0u3B51J9k4" ||
+			 SemaphoreID == "hs_l0u3B51J9k5" {
 			s.server.semaphore[SemaphoreID] = NewSemaphore(SemaphoreID, 32)
+		} else if SemaphoreID == "ta_10s3k6" {
+			s.server.semaphore[SemaphoreID] = NewSemaphore(SemaphoreID, 4)
 		} else {
 			s.server.semaphore[SemaphoreID] = NewSemaphore(SemaphoreID, 1)
 		}

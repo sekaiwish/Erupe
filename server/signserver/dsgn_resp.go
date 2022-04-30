@@ -51,7 +51,7 @@ func (s *Session) makeSignInResp(uid int) []byte {
 	}
 
 	rand.Seed(time.Now().UnixNano())
-	token := randSeq(15)
+	token := randSeq(16)
 	// TODO: register token to db, users table
 
 	bf := byteframe.NewByteFrame()

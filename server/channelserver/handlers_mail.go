@@ -364,9 +364,27 @@ func handleMsgMhfSendMail(s *Session, p mhfpacket.MHFPacket) {
 		INSERT INTO mail (sender_id, recipient_id, subject, body, attached_item, attached_item_amount, is_guild_invite)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
 	`
-	_, err := s.server.db.Exec(query, s.charID, pkt.RecipientID, pkt.Subject, pkt.Body, pkt.ItemID, pkt.Quantity, false)
-	if err != nil {
-		s.logger.Fatal("Failed to send mail")
+
+	if pkt.RecipientID == 0 { // Guild mail
+		g, err := GetGuildInfoByCharacterId(s, s.charID)
+		if err != nil {
+			s.logger.Fatal("Failed to get guild info for mail")
+		}
+		gm, err := GetGuildMembers(s, g.ID, false)
+		if err != nil {
+			s.logger.Fatal("Failed to get guild members for mail")
+		}
+		for i := 0; i < len(gm); i++ {
+			_, err := s.server.db.Exec(query, s.charID, gm[i].CharID, pkt.Subject, pkt.Body, 0, 0, false)
+			if err != nil {
+				s.logger.Fatal("Failed to send mail")
+			}
+		}
+	} else {
+		_, err := s.server.db.Exec(query, s.charID, pkt.RecipientID, pkt.Subject, pkt.Body, pkt.ItemID, pkt.Quantity, false)
+		if err != nil {
+			s.logger.Fatal("Failed to send mail")
+		}
 	}
 
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))

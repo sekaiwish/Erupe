@@ -914,10 +914,8 @@ func handleMsgMhfInfoGuild(s *Session, p mhfpacket.MHFPacket) {
 			bf.WriteUint16(0x00)
 		} else if guild.LeaderCharID == s.charID {
 			bf.WriteUint16(0x01)
-		} else if characterGuildData.IsSubLeader() {
-			bf.WriteUint16(0x02)
 		} else {
-			bf.WriteUint16(0x00)
+			bf.WriteUint16(0x02)
 		}
 
 		leaderName := s.clientContext.StrConv.MustEncode(guild.LeaderName)
@@ -934,7 +932,7 @@ func handleMsgMhfInfoGuild(s *Session, p mhfpacket.MHFPacket) {
 		bf.WriteUint32(guild.RankRP)
 		bf.WriteNullTerminatedBytes(leaderName)
 		bf.WriteBytes([]byte{0x00, 0x00, 0x00, 0x00}) // Unk
-		bf.WriteUint8(0) // isReturnGuild
+		bf.WriteBool(false) // isReturnGuild
 		bf.WriteBytes([]byte{0x01, 0x02, 0x02}) // Unk
 		bf.WriteUint32(guild.EventRP)
 
@@ -1228,10 +1226,10 @@ func handleMsgMhfEnumerateGuild(s *Session, p mhfpacket.MHFPacket) {
 		bf.WriteUint8(0x00)  // Unk
 		bf.WriteUint16(guild.Rank)
 		bf.WriteUint32(uint32(guild.CreatedAt.Unix()))
-		bf.WriteUint8(uint8(len(guildName)))
-		bf.WriteBytes(guildName)
-		bf.WriteUint8(uint8(len(leaderName)))
-		bf.WriteBytes(leaderName)
+		bf.WriteUint8(uint8(len(guildName)+1))
+		bf.WriteNullTerminatedBytes(guildName)
+		bf.WriteUint8(uint8(len(leaderName)+1))
+		bf.WriteNullTerminatedBytes(leaderName)
 		bf.WriteUint8(0x01) // Unk
 	}
 
@@ -1814,7 +1812,10 @@ func handleMsgMhfAddGuildWeeklyBonusExceptionalUser(s *Session, p mhfpacket.MHFP
 
 func handleMsgMhfAddGuildMissionCount(s *Session, p mhfpacket.MHFPacket) {}
 
-func handleMsgMhfSetGuildMissionTarget(s *Session, p mhfpacket.MHFPacket) {}
+func handleMsgMhfSetGuildMissionTarget(s *Session, p mhfpacket.MHFPacket) {
+	pkt := p.(*mhfpacket.MsgMhfSetGuildMissionTarget)
+	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
+}
 
 func handleMsgMhfCancelGuildMissionTarget(s *Session, p mhfpacket.MHFPacket) {}
 
