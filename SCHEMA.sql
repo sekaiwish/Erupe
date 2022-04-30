@@ -1,7 +1,7 @@
 BEGIN;
 
 ALTER TABLE characters
-    ADD COLUMN guild_post_checked int NOT NULL DEFAULT CAST(EXTRACT(epoch FROM now()) AS int),
+    ADD COLUMN guild_post_checked timestamp without time zone NOT NULL DEFAULT now(),
     ADD COLUMN time_played int NOT NULL DEFAULT 0,
     ADD COLUMN weapon_id int NOT NULL DEFAULT 0;
 
@@ -37,9 +37,9 @@ CREATE TABLE guild_posts
     author_id int NOT NULL,
     post_type int NOT NULL,
     stamp_id int NOT NULL,
-    post bytea NOT NULL,
-    likes int NOT NULL DEFAULT 0,
-    created_at int NOT NULL DEFAULT CAST(EXTRACT(epoch FROM now()) AS int),
+    title text NOT NULL,
+    body text NOT NULL,
+    created_at timestamp without time zone NOT NULL DEFAULT now(),
     liked_by text NOT NULL DEFAULT ''
 );
 

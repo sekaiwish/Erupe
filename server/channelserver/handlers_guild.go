@@ -1641,42 +1641,62 @@ func handleMsgMhfGuildHuntdata(s *Session, p mhfpacket.MHFPacket) {
 	doAckBufSucceed(s, pkt.AckHandle, make([]byte, 4))
 }
 
+type MessageBoardPost struct {
+	Type      uint32 `db:"post_type"`
+	StampID   uint32 `db:"stamp_id"`
+	Title     string `db:"title"`
+	Body      string `db:"body"`
+	AuthorID  uint32 `db:"author_id"`
+	Timestamp uint64 `db:"created_at"`
+	LikedBy   string `db:"liked_by"`
+}
+
 func handleMsgMhfEnumerateGuildMessageBoard(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfEnumerateGuildMessageBoard)
 	guild, _ := GetGuildInfoByCharacterId(s, s.charID)
-	msgs, err := s.server.db.Query("SELECT author_id, created_at, stamp_id, likes, post, liked_by FROM guild_posts WHERE guild_id = $1 AND post_type = $2 ORDER BY created_at DESC", guild.ID, int(pkt.BoardType))
+
+	msgs, err := s.server.db.Queryx("SELECT post_type, stamp_id, title, body, author_id, (EXTRACT(epoch FROM created_at)::int) as created_at, liked_by FROM guild_posts WHERE guild_id = $1 AND post_type = $2 ORDER BY created_at DESC", guild.ID, int(pkt.BoardType))
 	if err != nil {
 		s.logger.Fatal("Failed to get guild messages from db", zap.Error(err))
 	}
-	msgsExist := false
-	var postCount int
+
 	bf := byteframe.NewByteFrame()
+	noMsgs := true
+	postCount := 0
 	for msgs.Next() {
-		msgsExist = true
+		noMsgs = false
 		postCount++
-		var authorId int
-		var timestamp int
-		var stampId int
-		var likes int
-		var post []byte
-		var likedBy string
-		msgs.Scan(&authorId, &timestamp, &stampId, &likes, &post, &likedBy)
-		bf.WriteUint64(uint64(authorId))
-		bf.WriteUint64(uint64(timestamp))
-		bf.WriteUint32(uint32(likes))
-		liked := 0
-		likedBySlice := strings.Split(likedBy, ",")
+
+		postData := &MessageBoardPost{}
+		err = msgs.StructScan(&postData)
+		if err != nil {
+			s.logger.Error("Failed to read guild message board post")
+		}
+
+		bf.WriteUint32(postData.Type)
+		bf.WriteUint32(postData.AuthorID)
+		bf.WriteUint64(postData.Timestamp)
+		liked := false
+		likedBySlice := strings.Split(postData.LikedBy, ",")
 		for i := 0; i < len(likedBySlice); i++ {
 			j, _ := strconv.ParseInt(likedBySlice[i], 10, 64)
 			if int(j) == int(s.charID) {
-				liked = 1; break
+				liked = true; break
 			}
 		}
-		bf.WriteUint8(uint8(liked))
-		bf.WriteUint32(uint32(stampId))
-		bf.WriteBytes(post)
+		if likedBySlice[0] == "" {
+			bf.WriteUint32(0)
+		} else {
+			bf.WriteUint32(uint32(len(likedBySlice)))
+		}
+		bf.WriteBool(liked)
+		bf.WriteUint32(postData.StampID)
+		bf.WriteUint32(uint32(len(postData.Title)))
+		bf.WriteBytes([]byte(postData.Title))
+		bf.WriteUint32(uint32(len(postData.Body)))
+		bf.WriteBytes([]byte(postData.Body))
 	}
-	if msgsExist == false {
+	if noMsgs {
 		doAckBufSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
 	} else {
 		data := byteframe.NewByteFrame()
@@ -1698,12 +1718,7 @@ func handleMsgMhfUpdateGuildMessageBoard(s *Session, p mhfpacket.MHFPacket) {
 		bodyLength := bf.ReadUint32()
 		title := bf.ReadBytes(uint(titleLength))
 		body := bf.ReadBytes(uint(bodyLength))
-		post := byteframe.NewByteFrame()
-		post.WriteUint32(uint32(titleLength))
-		post.WriteBytes(title)
-		post.WriteUint32(uint32(bodyLength))
-		post.WriteBytes(body)
-		_, err := s.server.db.Exec("INSERT INTO guild_posts (guild_id, author_id, stamp_id, post_type, post) VALUES ($1, $2, $3, $4, $5)", guild.ID, s.charID, int(stampId), int(postType), post.Data())
+		_, err := s.server.db.Exec("INSERT INTO guild_posts (guild_id, author_id, stamp_id, post_type, title, body) VALUES ($1, $2, $3, $4, $5, $6)", guild.ID, s.charID, int(stampId), int(postType), string(title), string(body))
 		if err != nil {
 			s.logger.Fatal("Failed to add new guild message to db", zap.Error(err))
 		}
@@ -1715,7 +1730,7 @@ func handleMsgMhfUpdateGuildMessageBoard(s *Session, p mhfpacket.MHFPacket) {
 	case 1: // Delete message
 		postType := bf.ReadUint32()
 		timestamp := bf.ReadUint64()
-		_, err := s.server.db.Exec("DELETE FROM guild_posts WHERE post_type = $1 AND created_at = $2 AND guild_id = $3", int(postType), int(timestamp), guild.ID)
+		_, err := s.server.db.Exec("DELETE FROM guild_posts WHERE post_type = $1 AND (EXTRACT(epoch FROM created_at)::int) = $2 AND guild_id = $3", int(postType), int(timestamp), guild.ID)
 		if err != nil {
 			s.logger.Fatal("Failed to delete guild message from db", zap.Error(err))
 		}
@@ -1726,12 +1741,7 @@ func handleMsgMhfUpdateGuildMessageBoard(s *Session, p mhfpacket.MHFPacket) {
 		bodyLength := bf.ReadUint32()
 		title := bf.ReadBytes(uint(titleLength))
 		body := bf.ReadBytes(uint(bodyLength))
-		post := byteframe.NewByteFrame()
-		post.WriteUint32(uint32(titleLength))
-		post.WriteBytes(title)
-		post.WriteUint32(uint32(bodyLength))
-		post.WriteBytes(body)
-		_, err := s.server.db.Exec("UPDATE guild_posts SET post = $1 WHERE post_type = $2 AND created_at = $3 AND guild_id = $4", post.Data(), int(postType), int(timestamp), guild.ID)
+		_, err := s.server.db.Exec("UPDATE guild_posts SET title = $1, body = $2 WHERE post_type = $3 AND (EXTRACT(epoch FROM created_at)::int) = $4 AND guild_id = $5", string(title), string(body), int(postType), int(timestamp), guild.ID)
 		if err != nil {
 			s.logger.Fatal("Failed to update guild message in db", zap.Error(err))
 		}
@@ -1739,26 +1749,26 @@ func handleMsgMhfUpdateGuildMessageBoard(s *Session, p mhfpacket.MHFPacket) {
 		postType := bf.ReadUint32()
 		timestamp := bf.ReadUint64()
 		stampId := bf.ReadUint32()
-		_, err := s.server.db.Exec("UPDATE guild_posts SET stamp_id = $1 WHERE post_type = $2 AND created_at = $3 AND guild_id = $4", int(stampId), int(postType), int(timestamp), guild.ID)
+		_, err := s.server.db.Exec("UPDATE guild_posts SET stamp_id = $1 WHERE post_type = $2 AND (EXTRACT(epoch FROM created_at)::int) = $3 AND guild_id = $4", int(stampId), int(postType), int(timestamp), guild.ID)
 		if err != nil {
 			s.logger.Fatal("Failed to update guild message stamp in db", zap.Error(err))
 		}
 	case 4: // Like message
 		postType := bf.ReadUint32()
 		timestamp := bf.ReadUint64()
-		likeState := bf.ReadUint8()
+		likeState := bf.ReadBool()
 		var likedBy string
-		err := s.server.db.QueryRow("SELECT liked_by FROM guild_posts WHERE post_type = $1 AND created_at = $2 AND guild_id = $3", int(postType), int(timestamp), guild.ID).Scan(&likedBy)
+		err := s.server.db.QueryRow("SELECT liked_by FROM guild_posts WHERE post_type = $1 AND (EXTRACT(epoch FROM created_at)::int) = $2 AND guild_id = $3", int(postType), int(timestamp), guild.ID).Scan(&likedBy)
 		if err != nil {
 			s.logger.Fatal("Failed to get guild message like data from db", zap.Error(err))
 		} else {
-			if likeState == 1 {
+			if likeState {
 				if len(likedBy) == 0 {
 					likedBy = strconv.Itoa(int(s.charID))
 				} else {
 					likedBy += "," + strconv.Itoa(int(s.charID))
 				}
-				_, err := s.server.db.Exec("UPDATE guild_posts SET likes = likes + 1, liked_by = $1 WHERE post_type = $2 AND created_at = $3 AND guild_id = $4", likedBy, int(postType), int(timestamp), guild.ID)
+				_, err := s.server.db.Exec("UPDATE guild_posts SET liked_by = $1 WHERE post_type = $2 AND (EXTRACT(epoch FROM created_at)::int) = $3 AND guild_id = $4", likedBy, int(postType), int(timestamp), guild.ID)
 				if err != nil {
 					s.logger.Fatal("Failed to like guild message in db", zap.Error(err))
 				}
@@ -1771,7 +1781,7 @@ func handleMsgMhfUpdateGuildMessageBoard(s *Session, p mhfpacket.MHFPacket) {
 					}
 				}
 				likedBy = strings.Join(likedBySlice, ",")
-				_, err := s.server.db.Exec("UPDATE guild_posts SET likes = likes - 1, liked_by = $1 WHERE post_type = $2 AND created_at = $3 AND guild_id = $4", likedBy, int(postType), int(timestamp), guild.ID)
+				_, err := s.server.db.Exec("UPDATE guild_posts SET liked_by = $1 WHERE post_type = $2 AND (EXTRACT(epoch FROM created_at)::int) = $3 AND guild_id = $4", likedBy, int(postType), int(timestamp), guild.ID)
 				if err != nil {
 					s.logger.Fatal("Failed to unlike guild message in db", zap.Error(err))
 				}
@@ -1780,15 +1790,15 @@ func handleMsgMhfUpdateGuildMessageBoard(s *Session, p mhfpacket.MHFPacket) {
 	case 5: // Check for new messages
 		var timeChecked int
 		var newPosts int
-		err := s.server.db.QueryRow("SELECT guild_post_checked FROM characters WHERE id = $1", s.charID).Scan(&timeChecked)
+		err := s.server.db.QueryRow("SELECT (EXTRACT(epoch FROM guild_post_checked)::int) FROM characters WHERE id = $1", s.charID).Scan(&timeChecked)
 		if err != nil {
 			s.logger.Fatal("Failed to get last guild post check timestamp from db", zap.Error(err))
 		} else {
-			_, err = s.server.db.Exec("UPDATE characters SET guild_post_checked = $1 WHERE id = $2", time.Now().Unix(), s.charID)
+			_, err = s.server.db.Exec("UPDATE characters SET guild_post_checked = $1 WHERE id = $2", time.Now(), s.charID)
 			if err != nil {
 				s.logger.Fatal("Failed to update guild post check timestamp in db", zap.Error(err))
 			} else {
-				err = s.server.db.QueryRow("SELECT COUNT(*) FROM guild_posts WHERE guild_id = $1 AND created_at > $2", guild.ID, timeChecked).Scan(&newPosts)
+				err = s.server.db.QueryRow("SELECT COUNT(*) FROM guild_posts WHERE guild_id = $1 AND (EXTRACT(epoch FROM created_at)::int) > $2", guild.ID, timeChecked).Scan(&newPosts)
 				if err != nil {
 					s.logger.Fatal("Failed to check for new guild posts in db", zap.Error(err))
 				} else {
