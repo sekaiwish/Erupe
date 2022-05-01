@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/Solenataris/Erupe/network/mhfpacket"
+	"github.com/jmoiron/sqlx"
   "go.uber.org/zap"
 )
 
@@ -13,6 +14,16 @@ SELECT
 	ga.id,
 	ga.name,
 	ga.created_at,
+	(
+		SELECT SUM(_) FROM
+		(
+			SELECT count(1) AS _ FROM guild_characters pggc WHERE pggc.guild_id = pg.id
+			UNION ALL
+			SELECT count(1) FROM guild_characters s1gc WHERE s1gc.guild_id = s1.id
+			UNION ALL
+			SELECT count(1) FROM guild_characters s2gc WHERE s2gc.guild_id = s2.id
+		) AS _
+	) AS total_members,
 	ga.parent_id,
 	pg.name as parent_name,
 	pgc.name as parent_owner,
@@ -88,6 +99,7 @@ type GuildAlliance struct {
 	ID            uint32    `db:"id"`
 	Name          string    `db:"name"`
 	CreatedAt     time.Time `db:"created_at"`
+	TotalMembers  uint32    `db:"total_members"`
 	ParentID      uint32    `db:"parent_id"`
 	ParentName    string    `db:"parent_name"`
 	ParentOwner   string    `db:"parent_owner"`
@@ -125,6 +137,19 @@ func GetAllianceData(s *Session, AllianceID uint32) (*GuildAlliance, error) {
 		s.logger.Error("Failed to build alliance struct from data", zap.Error(err))
 		return nil, err
 	}
+	return alliance, nil
+}
+
+func buildAllianceObjectFromDbResult(result *sqlx.Rows, err error, s *Session) (*GuildAlliance, error) {
+	alliance := &GuildAlliance{}
+
+	err = result.StructScan(alliance)
+
+	if err != nil {
+		s.logger.Error("failed to retrieve alliance from database", zap.Error(err))
+		return nil, err
+	}
+
 	return alliance, nil
 }
 
