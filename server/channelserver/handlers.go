@@ -2,6 +2,7 @@ package channelserver
 
 import (
 	"bytes"
+	"encoding/binary"
 	"encoding/hex"
 	"io/ioutil"
 	"math/bits"
@@ -361,10 +362,92 @@ func handleMsgMhfGetExtraInfo(s *Session, p mhfpacket.MHFPacket) {}
 func handleMsgMhfAcquireTitle(s *Session, p mhfpacket.MHFPacket) {}
 
 func handleMsgMhfEnumerateTitle(s *Session, p mhfpacket.MHFPacket) {}
+func handleMsgMhfEnumerateUnionItem(s *Session, p mhfpacket.MHFPacket) {
+	pkt := p.(*mhfpacket.MsgMhfEnumerateUnionItem)
+	var boxContents []byte
+	bf := byteframe.NewByteFrame()
+	err := s.server.db.QueryRow("SELECT item_box FROM users, characters WHERE characters.id = $1 AND users.id = characters.user_id", int(s.charID)).Scan(&boxContents)
+	if err != nil {
+		s.logger.Fatal("Failed to get shared item box contents from db", zap.Error(err))
+	} else {
+		if len(boxContents) == 0 {
+			bf.WriteUint32(0x00)
+		} else {
+			amount := len(boxContents) / 4
+			bf.WriteUint16(uint16(amount))
+			bf.WriteUint32(0x00)
+			bf.WriteUint16(0x00)
+			for i := 0; i < amount; i++ {
+				bf.WriteUint32(binary.BigEndian.Uint32(boxContents[i*4 : i*4+4]))
+				if i+1 != amount {
+					bf.WriteUint64(0x00)
+				}
+			}
+		}
+	}
+	doAckBufSucceed(s, pkt.AckHandle, bf.Data())
+}
 
-func handleMsgMhfEnumerateUnionItem(s *Session, p mhfpacket.MHFPacket) {}
+func handleMsgMhfUpdateUnionItem(s *Session, p mhfpacket.MHFPacket) {
+	pkt := p.(*mhfpacket.MsgMhfUpdateUnionItem)
+	// Get item cache from DB
+	var boxContents []byte
+	var oldItems []Item
 
-func handleMsgMhfUpdateUnionItem(s *Session, p mhfpacket.MHFPacket) {}
+	err := s.server.db.QueryRow("SELECT item_box FROM users, characters WHERE characters.id = $1 AND users.id = characters.user_id", int(s.charID)).Scan(&boxContents)
+	if err != nil {
+		s.logger.Fatal("Failed to get shared item box contents from db", zap.Error(err))
+	} else {
+		amount := len(boxContents) / 4
+		oldItems = make([]Item, amount)
+		for i := 0; i < amount; i++ {
+			oldItems[i].ItemId = binary.BigEndian.Uint16(boxContents[i*4 : i*4+2])
+			oldItems[i].Amount = binary.BigEndian.Uint16(boxContents[i*4+2 : i*4+4])
+		}
+	}
+
+	// Update item stacks
+	newItems := make([]Item, len(oldItems))
+	copy(newItems, oldItems)
+	for i := 0; i < int(pkt.Amount); i++ {
+		for j := 0; j <= len(oldItems); j++ {
+			if j == len(oldItems) {
+				var newItem Item
+				newItem.ItemId = pkt.Items[i].ItemId
+				newItem.Amount = pkt.Items[i].Amount
+				newItems = append(newItems, newItem)
+				break
+			}
+			if pkt.Items[i].ItemId == oldItems[j].ItemId {
+				newItems[j].Amount = pkt.Items[i].Amount
+				break
+			}
+		}
+	}
+
+	// Delete empty item stacks
+	for i := len(newItems) - 1; i >= 0; i-- {
+		if int(newItems[i].Amount) == 0 {
+			copy(newItems[i:], newItems[i+1:])
+			newItems[len(newItems)-1] = make([]Item, 1)[0]
+			newItems = newItems[:len(newItems)-1]
+		}
+	}
+
+	// Create new item cache
+	bf := byteframe.NewByteFrame()
+	for i := 0; i < len(newItems); i++ {
+		bf.WriteUint16(newItems[i].ItemId)
+		bf.WriteUint16(newItems[i].Amount)
+	}
+
+	// Upload new item cache
+	_, err = s.server.db.Exec("UPDATE users SET item_box = $1 FROM characters WHERE  users.id = characters.user_id AND characters.id = $2", bf.Data(), int(s.charID))
+	if err != nil {
+		s.logger.Fatal("Failed to update shared item box contents in db", zap.Error(err))
+	}
+	doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
+}
 
 func handleMsgMhfAcquireCafeItem(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfAcquireCafeItem)
