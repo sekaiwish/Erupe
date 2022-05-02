@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"net"
 	"sync"
-	"fmt"
 
 	"github.com/Solenataris/Erupe/network"
 	"github.com/Andoryuuta/byteframe"
@@ -50,7 +49,6 @@ func (s *Session) handlePacket(pkt []byte) error {
 	sugar := s.logger.Sugar()
 
 	bf := byteframe.NewByteFrameFromBytes(pkt)
-	fmt.Println(hex.Dump(pkt))
 	reqType := string(bf.ReadNullTerminatedBytes())
 	switch reqType {
 	case "DLTSKEYSIGN:100":
@@ -90,7 +88,6 @@ func (s *Session) handleDSGNRequest(bf *byteframe.ByteFrame) error {
 	newCharaReq := false
 
 	if reqUsername[len(reqUsername) - 1] == 43 { // '+'
-		s.server.logger.Info("User requesting new character")
 		reqUsername = reqUsername[:len(reqUsername) - 1]
 		newCharaReq = true
 	}
