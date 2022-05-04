@@ -97,6 +97,13 @@ func handleMsgSysCastBinary(s *Session, p mhfpacket.MHFPacket) {
 		if pkt.MessageType == 1 {
 			session := s.server.semaphore["hs_l0u3B51J9k3"]
 			(*session).BroadcastMHF(resp, s)
+		} else {
+			s.Lock()
+			haveStage := s.stage != nil
+			if haveStage {
+				s.stage.BroadcastMHF(resp, s)
+			}
+			s.Unlock()
 		}
 	case BroadcastTypeTargeted:
 		for _, targetID := range (*msgBinTargeted).TargetCharIDs {
