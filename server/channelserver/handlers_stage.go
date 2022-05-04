@@ -13,11 +13,17 @@ func handleMsgSysCreateStage(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgSysCreateStage)
 
 	s.server.stagesLock.Lock()
+	if _, exists := s.server.stages[pkt.StageID]; exists {
+		s.server.stagesLock.Unlock()
+    doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x01})
+	} else {
 		stage := NewStage(pkt.StageID)
 		stage.maxPlayers = uint16(pkt.PlayerCount)
 		s.server.stages[stage.id] = stage
-	s.server.stagesLock.Unlock()
-	doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
+		s.server.stagesLock.Unlock()
+		doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
+	}
+	return
 }
 
 func handleMsgSysStageDestruct(s *Session, p mhfpacket.MHFPacket) {}
@@ -71,18 +77,18 @@ func doStageTransfer(s *Session, ackHandle uint32, stageID string) {
 		// It seems to be acceptable to recast all MSG_SYS_SET_USER_BINARY messages so far,
 		// players are still notified when a new player has joined the stage.
 		// These extra messages may not be needed
-		//s.stage.BroadcastMHF(&mhfpacket.MsgSysNotifyUserBinary{
-		//	CharID:     s.charID,
-		//	BinaryType: 1,
-		//}, s)
-		//s.stage.BroadcastMHF(&mhfpacket.MsgSysNotifyUserBinary{
-		//	CharID:     s.charID,
-		//	BinaryType: 2,
-		//}, s)
-		//s.stage.BroadcastMHF(&mhfpacket.MsgSysNotifyUserBinary{
-		//	CharID:     s.charID,
-		//	BinaryType: 3,
-		//}, s)
+		s.stage.BroadcastMHF(&mhfpacket.MsgSysNotifyUserBinary{
+			CharID:     s.charID,
+			BinaryType: 1,
+		}, s)
+		s.stage.BroadcastMHF(&mhfpacket.MsgSysNotifyUserBinary{
+			CharID:     s.charID,
+			BinaryType: 2,
+		}, s)
+		s.stage.BroadcastMHF(&mhfpacket.MsgSysNotifyUserBinary{
+			CharID:     s.charID,
+			BinaryType: 3,
+		}, s)
 
 		//Notify the entree client about all of the existing clients in the stage.
 		s.logger.Info("Notifying entree about existing stage clients")
@@ -252,7 +258,9 @@ func handleMsgSysReserveStage(s *Session, p mhfpacket.MHFPacket) {
 	s.server.stagesLock.Unlock()
 
 	if !gotStage {
-		s.logger.Fatal("Failed to get stage", zap.String("StageID", stageID))
+		s.logger.Error("Failed to get stage", zap.String("StageID", stageID))
+		doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
+		return
 	}
 
 	// Try to reserve a slot, fail if full.

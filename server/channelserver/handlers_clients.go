@@ -14,7 +14,10 @@ func handleMsgSysEnumerateClient(s *Session, p mhfpacket.MHFPacket) {
 
 	stage, ok := s.server.stages[pkt.StageID]
 	if !ok {
-		s.logger.Fatal("Can't enumerate clients for stage that doesn't exist!", zap.String("stageID", pkt.StageID))
+		s.logger.Error("Can't enumerate clients for stage that doesn't exist!", zap.String("stageID", pkt.StageID))
+		s.server.stagesLock.RUnlock()
+		doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
+		return
 	}
 
 	// Unlock the stages map.

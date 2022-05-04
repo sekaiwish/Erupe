@@ -190,6 +190,9 @@ func logoutPlayer(s *Session) {
 	}
 	s.stage.RUnlock()
 
+  delete(s.server.sessions, s.rawConn)
+  s.rawConn.Close()
+
 	if s.server.erupeConfig.DevModeOptions.ServerName != "" {
 		_, err := s.server.db.Exec("UPDATE servers SET current_players=$1 WHERE server_name=$2", uint32(len(s.server.sessions)), s.server.erupeConfig.DevModeOptions.ServerName)
 		if err != nil {
