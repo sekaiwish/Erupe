@@ -58,8 +58,6 @@ func handleMsgSysCreateAcquireSemaphore(s *Session, p mhfpacket.MHFPacket) {
 			 SemaphoreID == "hs_l0u3B51J9k4" ||
 			 SemaphoreID == "hs_l0u3B51J9k5" {
 			s.server.semaphore[SemaphoreID] = NewSemaphore(SemaphoreID, 32)
-		} else if SemaphoreID == "ta_10s3k6" {
-			s.server.semaphore[SemaphoreID] = NewSemaphore(SemaphoreID, 4)
 		} else {
 			s.server.semaphore[SemaphoreID] = NewSemaphore(SemaphoreID, 1)
 		}
@@ -105,9 +103,7 @@ func handleMsgSysCreateAcquireSemaphore(s *Session, p mhfpacket.MHFPacket) {
 	}
 }
 
-func handleMsgSysAcquireSemaphore(s *Session, p mhfpacket.MHFPacket) {
-	//pkt := p.(*mhfpacket.MsgSysAcquireSemaphore)
-}
+func handleMsgSysAcquireSemaphore(s *Session, p mhfpacket.MHFPacket) { }
 
 func handleMsgSysReleaseSemaphore(s *Session, p mhfpacket.MHFPacket) {
 	//pkt := p.(*mhfpacket.MsgSysReleaseSemaphore)
@@ -121,5 +117,11 @@ func handleMsgSysReleaseSemaphore(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgSysCheckSemaphore(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgSysCheckSemaphore)
-	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
+	resp := []byte{0x00, 0x00, 0x00, 0x00}
+	s.server.semaphoreLock.Lock()
+	if _, exists := s.server.semaphore[pkt.StageID]; exists {
+		resp = []byte{0x00, 0x00, 0x00, 0x01}
+	}
+	s.server.semaphoreLock.Unlock()
+	doAckSimpleSucceed(s, pkt.AckHandle, resp)
 }
