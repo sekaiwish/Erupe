@@ -272,7 +272,7 @@ function doLogin(option) {
         addLog('Creating new character...', 'normal');
         window.external.loginCog(username+'+', password, password);
       } else {
-        window.external.loginCog(username, password, password);
+        window.external.loginCog(username, password, 'test');
 	  }
     } catch (e) {
       addLog('Error on loginCog: '+e, 'error');

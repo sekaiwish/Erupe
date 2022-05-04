@@ -27,7 +27,7 @@ func (s *Server) newUserChara(username string) error {
 	_, err = s.db.Exec(`
 		INSERT INTO characters (
 			user_id, is_female, is_new_character, name, unk_desc_string,
-			hrp, gr, weapon, last_login)
+			hrp, gr, weapon_type, last_login)
 		VALUES($1, False, True, '', '', 1, 0, 0, $2)`,
 		id,
 		uint32(time.Now().Unix()),
@@ -61,7 +61,7 @@ func (s *Server) registerDBAccount(username string, password string) error {
 	_, err = s.db.Exec(`
 		INSERT INTO characters (
 			user_id, is_female, is_new_character, name, unk_desc_string,
-			hrp, gr, weapon, last_login)
+			hrp, gr, weapon_type, last_login)
 		VALUES($1, False, True, '', '', 1, 0, 0, $2)`,
 		id,
 		uint32(time.Now().Unix()),
