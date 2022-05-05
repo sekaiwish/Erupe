@@ -175,6 +175,7 @@ func handleMsgSysLogin(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgSysLogout(s *Session, p mhfpacket.MHFPacket) {
 	logoutPlayer(s)
+	removeEmptyStages(s)
 }
 
 func logoutPlayer(s *Session) {

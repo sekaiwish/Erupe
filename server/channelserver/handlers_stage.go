@@ -3,6 +3,7 @@ package channelserver
 import (
 	"fmt"
 	"time"
+	"strings"
 
 	"github.com/Solenataris/Erupe/network/mhfpacket"
 	"github.com/Andoryuuta/byteframe"
@@ -15,6 +16,10 @@ func handleMsgSysCreateStage(s *Session, p mhfpacket.MHFPacket) {
 	s.server.stagesLock.Lock()
 	if _, exists := s.server.stages[pkt.StageID]; exists {
 		s.server.stagesLock.Unlock()
+		if strings.HasPrefix(pkt.StageID, "sl2Qs") {
+			doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
+			return
+		}
     doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x01})
 	} else {
 		stage := NewStage(pkt.StageID)
@@ -149,6 +154,16 @@ func doStageTransfer(s *Session, ackHandle uint32, stageID string) {
 	}
 }
 
+func removeEmptyStages(s *Session) {
+	s.server.Lock()
+	for sid, stage := range s.server.stages {
+		if strings.HasPrefix(sid, "sl2Qs") && len(stage.reservedClientSlots) == 0 {
+			delete(s.server.stages, sid)
+		}
+	}
+	s.server.Unlock()
+}
+
 func removeSessionFromStage(s *Session) {
 	s.stage.Lock()
 	defer s.stage.Unlock()
@@ -156,6 +171,15 @@ func removeSessionFromStage(s *Session) {
 	// Remove client from old stage.
 	delete(s.stage.clients, s)
 	delete(s.stage.reservedClientSlots, s.charID)
+
+	// Remove client from all reservations
+	s.server.Lock()
+	for _, stage := range s.server.stages {
+		if _, exists := stage.reservedClientSlots[s.charID]; exists {
+			delete(stage.reservedClientSlots, s.charID)
+		}
+	}
+	s.server.Unlock()
 
 	// Delete old stage objects owned by the client.
 	s.logger.Info("Sending MsgSysDeleteObject to old stage clients")
@@ -169,14 +193,16 @@ func removeSessionFromStage(s *Session) {
 			// Actually delete it form the objects map.
 			delete(s.stage.objects, objID)
 		}
-}
+	}
 	for objListID, stageObjectList := range s.stage.objectList {
 		if stageObjectList.charid == s.charID {
 			//Added to prevent duplicates from flooding ObjectMap and causing server hangs
 			s.stage.objectList[objListID].status=false
 			s.stage.objectList[objListID].charid=0
-			}
 		}
+	}
+
+	removeEmptyStages(s)
 }
 
 
