@@ -12,6 +12,8 @@ type OperateMailOperation uint8
 
 const (
 	OPERATE_MAIL_DELETE = 0x01
+  OPERATE_MAIL_LOCK = 0x02
+  OPERATE_MAIL_UNLOCK = 0x03
   OPERATE_MAIL_ACQUIRE_ITEM = 0x05
 )
 
