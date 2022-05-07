@@ -22,7 +22,10 @@ func (m *MsgMhfOprMember) Opcode() network.PacketID {
 
 // Parse parses the packet from binary
 func (m *MsgMhfOprMember) Parse(bf *byteframe.ByteFrame, ctx *clientctx.ClientContext) error {
-	return errors.New("NOT IMPLEMENTED")
+  m.AckHandle = bf.ReadUint32()
+  _ = bf.ReadUint32()
+  _ = bf.ReadUint32()
+  return nil
 }
 
 // Build builds a binary packet from the current data.

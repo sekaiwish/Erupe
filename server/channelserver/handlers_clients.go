@@ -63,7 +63,7 @@ func handleMsgMhfListMember(s *Session, p mhfpacket.MHFPacket) {
 }
 
 func handleMsgMhfOprMember(s *Session, p mhfpacket.MHFPacket) {
-	pkt := p.(*mhfpacket.MsgMhfListMember)
+	pkt := p.(*mhfpacket.MsgMhfOprMember)
 	// TODO: add targetid(uint32) to charid(uint32)'s database under new field
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 }
