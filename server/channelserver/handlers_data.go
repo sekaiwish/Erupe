@@ -63,6 +63,16 @@ func handleMsgMhfSavedata(s *Session, p mhfpacket.MHFPacket) {
 		s.logger.Fatal("Failed to character weapon type in db", zap.Error(err))
 	}
 
+	isMale := uint8(decompressedData[80]) // 0x50
+	if isMale == 1 {
+		_, err = s.server.db.Exec("UPDATE characters SET is_female=true WHERE id=$1", s.charID)
+	} else {
+		_, err = s.server.db.Exec("UPDATE characters SET is_female=false WHERE id=$1", s.charID)
+	}
+	if err != nil {
+		s.logger.Fatal("Failed to character gender in db", zap.Error(err))
+	}
+
 	weaponId := binary.LittleEndian.Uint16(decompressedData[128522:128524]) // 0x1F60A
 	_, err = s.server.db.Exec("UPDATE characters SET weapon_id=$1 WHERE id=$2", weaponId, s.charID)
 	if err != nil {
