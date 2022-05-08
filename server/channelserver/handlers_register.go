@@ -236,6 +236,7 @@ func handleMsgSysLoadRegister(s *Session, p mhfpacket.MHFPacket) {
 	}
 }
 
+// Unused
 func (s *Session) notifyplayer() {
 	s.QueueSendNonBlocking([]byte{0x00, 0x3F, 0x00, 0x0E, 0x00, 0x1D})
 	s.QueueSendNonBlocking([]byte{0x00, 0x3F, 0x00, 0x0D, 0x00, 0x1D})
@@ -243,13 +244,73 @@ func (s *Session) notifyplayer() {
 }
 
 func (s *Session) notifyall() {
-	for session := range s.server.semaphore["hs_l0u3B51J9k3"].clients {
-		session.QueueSendNonBlocking([]byte{0x00, 0x3F, 0x00, 0x0C, 0x00, 0x1D})
-		session.QueueSendNonBlocking([]byte{0x00, 0x3F, 0x00, 0x0D, 0x00, 0x1D})
-		session.QueueSendNonBlocking([]byte{0x00, 0x3F, 0x00, 0x0E, 0x00, 0x1D})
+	if _, exists := s.server.semaphore["hs_l0u3B51J9k3"]; exists {
+		for session := range s.server.semaphore["hs_l0u3B51J9k3"].clients {
+			session.QueueSendNonBlocking([]byte{0x00, 0x3F, 0x00, 0x0C, 0x00, 0x1D})
+			session.QueueSendNonBlocking([]byte{0x00, 0x3F, 0x00, 0x0D, 0x00, 0x1D})
+			session.QueueSendNonBlocking([]byte{0x00, 0x3F, 0x00, 0x0E, 0x00, 0x1D})
+		}
+	} else if _, exists := s.server.semaphore["hs_l0u3B5129k3"]; exists {
+		for session := range s.server.semaphore["hs_l0u3B5129k3"].clients {
+			session.QueueSendNonBlocking([]byte{0x00, 0x3F, 0x00, 0x0C, 0x00, 0x1D})
+			session.QueueSendNonBlocking([]byte{0x00, 0x3F, 0x00, 0x0D, 0x00, 0x1D})
+			session.QueueSendNonBlocking([]byte{0x00, 0x3F, 0x00, 0x0E, 0x00, 0x1D})
+		}
+	} else if _, exists := s.server.semaphore["hs_l0u3B512Ak3"]; exists {
+		for session := range s.server.semaphore["hs_l0u3B512Ak3"].clients {
+			session.QueueSendNonBlocking([]byte{0x00, 0x3F, 0x00, 0x0C, 0x00, 0x1D})
+			session.QueueSendNonBlocking([]byte{0x00, 0x3F, 0x00, 0x0D, 0x00, 0x1D})
+			session.QueueSendNonBlocking([]byte{0x00, 0x3F, 0x00, 0x0E, 0x00, 0x1D})
+		}
 	}
 }
 
+func checkRaviSemaphore(s *Session) bool {
+	if _, exists := s.server.semaphore["hs_l0u3B51J9k3"]; exists {
+		return true
+	} else if _, exists := s.server.semaphore["hs_l0u3B5129k3"]; exists {
+		return true
+	} else if _, exists := s.server.semaphore["hs_l0u3B512Ak3"]; exists {
+		return true
+	}
+	return false
+}
+
+func releaseRaviSemaphore(s *Session) {
+	s.server.raviente.Lock()
+	if _, exists := s.server.semaphore["hs_l0u3B51J9k3"]; exists {
+		if len(s.server.semaphore["hs_l0u3B51J9k3"].reservedClientSlots) == 0 {
+			resetRavi(s)
+		}
+	}
+	if _, exists := s.server.semaphore["hs_l0u3B5129k3"]; exists {
+		if len(s.server.semaphore["hs_l0u3B5129k3"].reservedClientSlots) == 0 {
+			resetRavi(s)
+		}
+	}
+	if _, exists := s.server.semaphore["hs_l0u3B512Ak3"]; exists {
+		if len(s.server.semaphore["hs_l0u3B512Ak3"].reservedClientSlots) == 0 {
+			resetRavi(s)
+		}
+	}
+	s.server.raviente.Unlock()
+}
+
+func resetRavi(s *Session) {
+	s.server.raviente.register.nextTime = 0
+	s.server.raviente.register.startTime = 0
+	s.server.raviente.register.killedTime = 0
+	s.server.raviente.register.postTime = 0
+	s.server.raviente.register.ravienteType = 0
+	s.server.raviente.register.maxPlayers = 0
+	s.server.raviente.register.carveQuest = 0
+	s.server.raviente.state.damageMultiplier = 1
+	s.server.raviente.register.register = []uint32{0, 0, 0, 0, 0}
+	s.server.raviente.state.stateData = []uint32{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+	s.server.raviente.support.supportData = []uint32{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+}
+
+// Unused
 func (s *Session) notifyticker() {
 	if _, exists := s.server.semaphore["hs_l0u3B51J9k3"]; exists {
 		s.server.semaphoreLock.Lock()

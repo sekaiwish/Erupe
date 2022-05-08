@@ -175,7 +175,6 @@ func handleMsgSysLogin(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgSysLogout(s *Session, p mhfpacket.MHFPacket) {
 	logoutPlayer(s)
-	removeEmptyStages(s)
 }
 
 func logoutPlayer(s *Session) {
@@ -201,6 +200,7 @@ func logoutPlayer(s *Session) {
 		}
 	}
 
+	removeSessionFromSemaphore(s)
 	removeSessionFromStage(s)
 
 	var timePlayed int
@@ -211,7 +211,7 @@ func logoutPlayer(s *Session) {
 	multiplier := 1
 	var rpGained int
 
-	if s.rights == 0x08091e4e || s.rights == 0x08091e0e { // N Course
+	if s.rights > 0x40000000 { // N Course
 		rpGained = timePlayed / 900 * multiplier
 		timePlayed = timePlayed % 900
 	} else {
@@ -254,7 +254,8 @@ func handleMsgSysTime(s *Session, p mhfpacket.MHFPacket) {
 		Timestamp:     uint32(Time_Current_Adjusted().Unix()), // JP timezone
 	}
 	s.QueueSendMHF(resp)
-	s.notifyticker() // Send raviente updates
+	// Send raviente updates
+	// s.notifyticker()
 }
 
 func handleMsgSysIssueLogkey(s *Session, p mhfpacket.MHFPacket) {
