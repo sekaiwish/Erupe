@@ -202,64 +202,6 @@ func handleMsgSysCastBinary(s *Session, p mhfpacket.MHFPacket) {
 		}
 		// END RAVI COMMANDS V2
 
-		// RAVI COMMANDS V1
-		if _, exists := s.server.semaphore["hs_l0u3B51J9k3"]; exists {
-			s.server.semaphoreLock.Lock()
-			getSemaphore := s.server.semaphore["hs_l0u3B51J9k3"]
-			s.server.semaphoreLock.Unlock()
-			if _, exists := getSemaphore.reservedClientSlots[s.charID]; exists {
-				if strings.HasPrefix(chatMessage.Message, "!ravistart") {
-					if s.server.raviente.register.startTime == 0 {
-						sendServerChatMessage(s, fmt.Sprintf("Raviente will start in less than 10 seconds"))
-						s.server.raviente.register.startTime = s.server.raviente.register.postTime
-					} else {
-						sendServerChatMessage(s, fmt.Sprintf("Raviente has already started"))
-					}
-				}
-				if strings.HasPrefix(chatMessage.Message, "!bressend") {
-					if s.server.raviente.state.stateData[28] > 0 {
-						sendServerChatMessage(s, fmt.Sprintf("Sending ressurection support"))
-						s.server.raviente.state.stateData[28] = 0
-					} else {
-						sendServerChatMessage(s, fmt.Sprintf("Ressurection support has not been requested"))
-					}
-				}
-				if strings.HasPrefix(chatMessage.Message, "!bsedsend") {
-					sendServerChatMessage(s, fmt.Sprintf("Sending sedation support if requested"))
-					// Total BerRavi HP
-					HP := s.server.raviente.state.stateData[0] + s.server.raviente.state.stateData[1] + s.server.raviente.state.stateData[2] + s.server.raviente.state.stateData[3] + s.server.raviente.state.stateData[4]
-					s.server.raviente.support.supportData[1] = HP
-				}
-				if strings.HasPrefix(chatMessage.Message, "!bsedreq") {
-					sendServerChatMessage(s, fmt.Sprintf("Requesting sedation support"))
-					// Total BerRavi HP
-					HP := s.server.raviente.state.stateData[0] + s.server.raviente.state.stateData[1] + s.server.raviente.state.stateData[2] + s.server.raviente.state.stateData[3] + s.server.raviente.state.stateData[4]
-					s.server.raviente.support.supportData[1] = HP + 12
-				}
-				if strings.HasPrefix(chatMessage.Message, "!setmultiplier ") {
-					var num uint8
-					n, numerr := fmt.Sscanf(chatMessage.Message, "!setmultiplier %d", &num)
-					if numerr != nil || n != 1 {
-						sendServerChatMessage(s, fmt.Sprintf("Please use the format !setmultiplier x"))
-					} else if s.server.raviente.state.damageMultiplier == 1 {
-						if num > 20 {
-							sendServerChatMessage(s, fmt.Sprintf("Max multiplier for Ravi is 20, setting to this value"))
-							s.server.raviente.state.damageMultiplier = 20
-						} else {
-							sendServerChatMessage(s, fmt.Sprintf("Setting Ravi damage multiplier to %d", num))
-							s.server.raviente.state.damageMultiplier = uint32(num)
-						}
-					} else {
-						sendServerChatMessage(s, fmt.Sprintf("Multiplier can only be set once, please restart Ravi to set again"))
-					}
-				}
-				if strings.HasPrefix(chatMessage.Message, "!checkmultiplier") {
-					sendServerChatMessage(s, fmt.Sprintf("Ravi's current damage multiplier is %d", s.server.raviente.state.damageMultiplier))
-				}
-			}
-		}
-		// END RAVI COMMANDS V1
-
 		if strings.HasPrefix(chatMessage.Message, "!tele ") {
 			var x, y int16
 			n, err := fmt.Sscanf(chatMessage.Message, "!tele %d %d", &x, &y)
