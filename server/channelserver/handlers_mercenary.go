@@ -128,7 +128,10 @@ func handleMsgMhfMercenaryHuntdata(s *Session, p mhfpacket.MHFPacket) {
 	doAckBufSucceed(s, pkt.AckHandle, make([]byte, 0x0A))
 }
 
-func handleMsgMhfEnumerateMercenaryLog(s *Session, p mhfpacket.MHFPacket) {}
+func handleMsgMhfEnumerateMercenaryLog(s *Session, p mhfpacket.MHFPacket) {
+	pkt := p.(*mhfpacket.MsgMhfEnumerateMercenaryLog)
+	doAckBufSucceed(s, pkt.AckHandle, make([]byte, 4))
+}
 
 func handleMsgMhfCreateMercenary(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfCreateMercenary)
