@@ -182,13 +182,9 @@ func logoutPlayer(s *Session) {
 		return
 	}
 
-	s.stage.RLock()
-	for client := range s.stage.clients {
-		client.QueueSendMHF(&mhfpacket.MsgSysDeleteUser{
-			CharID: s.charID,
-		})
-	}
-	s.stage.RUnlock()
+	s.server.BroadcastMHF(&mhfpacket.MsgSysDeleteUser {
+		CharID: s.charID,
+	}, s)
 
   delete(s.server.sessions, s.rawConn)
   s.rawConn.Close()

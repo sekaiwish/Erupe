@@ -29,29 +29,20 @@ type stageBinaryKey struct {
 // Stage holds stage-specific information
 type Stage struct {
 	sync.RWMutex
-
-	// Stage ID string
 	id string
-
 	// Total count of objects ever created for this stage. Used for ObjID generation.
 	gameObjectCount uint32
-
 	// Save all object in stage
 	objects map[uint32]*StageObject
-
 	objectList map[uint8]*ObjectMap
-	// Map of session -> charID.
-	// These are clients that are CURRENTLY in the stage
+	// Map of session -> charID, clients that are CURRENTLY in the stage
 	clients map[*Session]uint32
-
 	// Map of charID -> interface{}, only the key is used, value is always nil.
 	// These are clients that aren't in the stage, but have reserved a slot (for quests, etc).
 	reservedClientSlots map[uint32]interface{}
-
 	// These are raw binary blobs that the stage owner sets,
 	// other clients expect the server to echo them back in the exact same format.
 	rawBinaryData map[stageBinaryKey][]byte
-
 	maxPlayers  uint16
 	hasDeparted bool
 	password    string
