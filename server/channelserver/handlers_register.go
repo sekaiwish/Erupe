@@ -146,8 +146,20 @@ func handleMsgSysOperateRegister(s *Session, p mhfpacket.MHFPacket) {
 			switch op {
 			case 2:
 				resp.WriteUint32(*ref)
-				resp.WriteUint32(*ref + data * damageMultiplier)
-				*ref += data * damageMultiplier
+				if dest == 28 { // Berserk resurrection tracker
+					resp.WriteUint32(*ref + data)
+					*ref += data
+				} else if dest == 17 { // Berserk poison tracker
+					if damageMultiplier == 1 {
+						resp.WriteUint32(*ref + data)
+					} else {
+						resp.WriteUint32(*ref + data)
+						*ref += data
+					}
+				} else {
+					resp.WriteUint32(*ref + data * damageMultiplier)
+					*ref += data * damageMultiplier
+				}
 			case 13:
 				fallthrough
 			case 14:
