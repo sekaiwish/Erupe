@@ -196,6 +196,14 @@ func logoutPlayer(s *Session) {
 		}
 	}
 
+	s.server.Lock()
+  for _, stage := range s.server.stages {
+    if _, exists := stage.reservedClientSlots[s.charID]; exists {
+      delete(stage.reservedClientSlots, s.charID)
+  	}
+	}
+	s.server.Unlock()
+
 	removeSessionFromSemaphore(s)
 	removeSessionFromStage(s)
 
