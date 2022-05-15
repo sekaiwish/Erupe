@@ -1,9 +1,6 @@
 package channelserver
 
 import (
-	"encoding/base64"
-	"fmt"
-
 	"github.com/Solenataris/Erupe/network/mhfpacket"
 	"github.com/Andoryuuta/byteframe"
 )
@@ -23,7 +20,7 @@ func handleMsgSysSetUserBinary(s *Session, p mhfpacket.MHFPacket) {
 		BinaryType: pkt.BinaryType,
 	}
 
-	s.stage.BroadcastMHF(msg, s)
+	s.server.BroadcastMHF(msg, s)
 }
 
 func handleMsgSysGetUserBinary(s *Session, p mhfpacket.MHFPacket) {
@@ -35,30 +32,12 @@ func handleMsgSysGetUserBinary(s *Session, p mhfpacket.MHFPacket) {
 	data, ok := s.server.userBinaryParts[userBinaryPartID{charID: pkt.CharID, index: pkt.BinaryType}]
 	resp := byteframe.NewByteFrame()
 
-	// If we can't get the real data, use a placeholder.
+	// If we can't get the real data, fail.
 	if !ok {
-		if pkt.BinaryType == 1 {
-			// Stub name response with character ID
-			resp.WriteBytes([]byte(fmt.Sprintf("CID%d", s.charID)))
-			resp.WriteUint8(0) // NULL terminator.
-		} else if pkt.BinaryType == 2 {
-			data, err := base64.StdEncoding.DecodeString("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABBn8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAAAAAAAAAAAAAAwAAAAAAAAAAAAAABAAAAAAAAAAAAAAABQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==")
-			if err != nil {
-				panic(err)
-			}
-			resp.WriteBytes(data)
-		} else if pkt.BinaryType == 3 {
-			data, err := base64.StdEncoding.DecodeString("AQAAA2ea5P8ATgEA/wEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABBn8AAAAAAAAAAAABAKAMAAAAAAAAAAAAACgAAAAAAAAAAAABAsQOAAAAAAAAAAABA6UMAAAAAAAAAAABBKAMAAAAAAAAAAABBToNAAAAAAAAAAAAAAMAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAAAgACAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD/////AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
-			if err != nil {
-				panic(err)
-			}
-			resp.WriteBytes(data)
-		}
+		doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
 	} else {
-		resp.WriteBytes(data)
+		doAckBufSucceed(s, pkt.AckHandle, data)
 	}
-
-	doAckBufSucceed(s, pkt.AckHandle, resp.Data())
 }
 
 func handleMsgSysNotifyUserBinary(s *Session, p mhfpacket.MHFPacket) {}
