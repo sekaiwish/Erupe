@@ -2,7 +2,7 @@ package channelserver
 
 import (
 	"github.com/Solenataris/Erupe/network/mhfpacket"
-	"github.com/Andoryuuta/byteframe"
+	// "github.com/Andoryuuta/byteframe"
 )
 
 func handleMsgSysInsertUser(s *Session, p mhfpacket.MHFPacket) {}
@@ -30,7 +30,6 @@ func handleMsgSysGetUserBinary(s *Session, p mhfpacket.MHFPacket) {
 	s.server.userBinaryPartsLock.RLock()
 	defer s.server.userBinaryPartsLock.RUnlock()
 	data, ok := s.server.userBinaryParts[userBinaryPartID{charID: pkt.CharID, index: pkt.BinaryType}]
-	resp := byteframe.NewByteFrame()
 
 	// If we can't get the real data, fail.
 	if !ok {
