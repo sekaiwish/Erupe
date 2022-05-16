@@ -1046,16 +1046,30 @@ func handleMsgMhfInfoGuild(s *Session, p mhfpacket.MHFPacket) {
 			applicantName := s.clientContext.StrConv.MustEncode(applicant.Name)
 			bf.WriteUint32(applicant.CharID)
 			bf.WriteUint32(0x05)
-			bf.WriteUint32(0x00320000)
-			bf.WriteUint8(uint8(len(applicantName) + 1))
+			bf.WriteUint16(0x0032)
+			bf.WriteUint8(0x00)
+			bf.WriteUint16(uint16(len(applicantName)+1))
 			bf.WriteNullTerminatedBytes(applicantName)
 		}
 
-		// Unk bool? if true +3 bytes after this
-		bf.WriteUint8(0x00)
+		bf.WriteUint16(0x0000)
+
+		/*
+		alliance application format
+		uint16 numapplicants (above)
+
+		uint32 guild id
+		uint32 guild leader id (for mail)
+		uint32 unk (always null in pcap)
+		uint16 unk (always 0001 in pcap)
+		uint16 len guild name
+		string nullterm guild name
+		uint16 len guild leader name
+		string nullterm guild leader name
+		*/
 
 		if guild.Icon != nil {
-			bf.WriteUint16(uint16(len(guild.Icon.Parts)))
+			bf.WriteUint8(uint8(len(guild.Icon.Parts)))
 
 			for _, p := range guild.Icon.Parts {
 				bf.WriteUint16(p.Index)
@@ -1070,7 +1084,7 @@ func handleMsgMhfInfoGuild(s *Session, p mhfpacket.MHFPacket) {
 				bf.WriteUint16(p.PosY)
 			}
 		} else {
-			bf.WriteUint16(0x00)
+			bf.WriteUint8(0x00)
 		}
 
 		doAckBufSucceed(s, pkt.AckHandle, bf.Data())
