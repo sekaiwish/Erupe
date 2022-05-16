@@ -175,34 +175,36 @@ func handleMsgMhfOperateJoint(s *Session, p mhfpacket.MHFPacket) {
 	}
 
 	switch pkt.Action {
-		case mhfpacket.OPERATE_JOINT_DISBAND:
-			if guild.LeaderCharID == s.charID && alliance.ParentID == guild.ID {
-				_, err = s.server.db.Exec("DELETE FROM guild_alliances WHERE id=$1", alliance.ID)
-				if err != nil {
-					s.logger.Fatal("Failed to disband alliance", zap.Error(err))
-				}
-				doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
-			} else {
-				s.logger.Warn(
-					"Non-owner of alliance attempted disband",
-					zap.Uint32("CharID", s.charID),
-					zap.Uint32("AllyID", alliance.ID),
-				)
-				doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
+	case mhfpacket.OPERATE_JOINT_DISBAND:
+		if guild.LeaderCharID == s.charID && alliance.ParentID == guild.ID {
+			_, err = s.server.db.Exec("DELETE FROM guild_alliances WHERE id=$1", alliance.ID)
+			if err != nil {
+				s.logger.Fatal("Failed to disband alliance", zap.Error(err))
 			}
-		case mhfpacket.OPERATE_JOINT_LEAVE:
-			if guild.LeaderCharID == s.charID {
-				// delete alliance application
-				// or leave alliance
-			} else {
-				s.logger.Warn(
-					"Non-owner of guild attempted alliance leave",
-					zap.Uint32("CharID", s.charID),
-				)
-				doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
-			}
+			doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
+		} else {
+			s.logger.Warn(
+				"Non-owner of alliance attempted disband",
+				zap.Uint32("CharID", s.charID),
+				zap.Uint32("AllyID", alliance.ID),
+			)
+			doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
+		}
+	case mhfpacket.OPERATE_JOINT_LEAVE:
+		if guild.LeaderCharID == s.charID {
+			// delete alliance application
+			// or leave alliance
+		} else {
+			s.logger.Warn(
+				"Non-owner of guild attempted alliance leave",
+				zap.Uint32("CharID", s.charID),
+			)
+			doAckSimpleFail(s, pkt.AckHandle, make([]byte, 4))
+		}
+	default:
+		panic(fmt.Sprintf("Unhandled operate joint action '%d'", pkt.Action))
+		doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 	}
-	return
 }
 
 func handleMsgMhfInfoJoint(s *Session, p mhfpacket.MHFPacket) {}
