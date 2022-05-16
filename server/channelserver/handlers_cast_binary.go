@@ -95,7 +95,14 @@ func handleMsgSysCastBinary(s *Session, p mhfpacket.MHFPacket) {
 		s.stage.BroadcastMHF(resp, s)
 	case BroadcastTypeRavi:
 		if pkt.MessageType == 1 {
-			session := s.server.semaphore["hs_l0u3B51J9k3"]
+			var session *Semaphore
+			if _, exists := s.server.semaphore["hs_l0u3B51J9k3"]; exists {
+				session = s.server.semaphore["hs_l0u3B51J9k3"]
+			} else if _, exists := s.server.semaphore["hs_l0u3B5129k3"]; exists {
+				session = s.server.semaphore["hs_l0u3B5129k3"]
+			} else if _, exists := s.server.semaphore["hs_l0u3B512Ak3"]; exists {
+				session = s.server.semaphore["hs_l0u3B512Ak3"]
+			}
 			(*session).BroadcastMHF(resp, s)
 		} else {
 			s.Lock()
