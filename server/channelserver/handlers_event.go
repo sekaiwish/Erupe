@@ -50,7 +50,9 @@ func handleMsgMhfReleaseEvent(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfEnumerateEvent(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfEnumerateEvent)
-	stubEnumerateNoResults(s, pkt.AckHandle)
+	bf := byteframe.NewByteFrame()
+	bf.WriteUint16(0)
+	doAckBufSucceed(s, pkt.AckHandle, bf.Data())
 }
 
 var persistentEventSchedule []activeFeature
