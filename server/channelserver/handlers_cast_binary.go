@@ -20,10 +20,10 @@ const (
 
 // MSG_SYS_CAST[ED]_BINARY broadcast types enum
 const (
-	BroadcastTypeTargeted = 0x01
-	BroadcastTypeStage    = 0x03
-	BroadcastTypeRavi     = 0x06
-	BroadcastTypeWorld    = 0x0a
+	BroadcastTypeTargeted  = 0x01
+	BroadcastTypeStage     = 0x03
+	BroadcastTypeSemaphore = 0x06
+	BroadcastTypeWorld     = 0x0a
 )
 
 func sendServerChatMessage(s *Session, message string) {
@@ -93,7 +93,7 @@ func handleMsgSysCastBinary(s *Session, p mhfpacket.MHFPacket) {
 		s.server.BroadcastMHF(resp, s)
 	case BroadcastTypeStage:
 		s.stage.BroadcastMHF(resp, s)
-	case BroadcastTypeRavi:
+	case BroadcastTypeSemaphore:
 		if pkt.MessageType == 1 {
 			var session *Semaphore
 			if _, exists := s.server.semaphore["hs_l0u3B51J9k3"]; exists {
