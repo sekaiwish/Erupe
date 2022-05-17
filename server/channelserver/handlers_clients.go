@@ -64,7 +64,21 @@ func handleMsgMhfListMember(s *Session, p mhfpacket.MHFPacket) {
 
 func handleMsgMhfOprMember(s *Session, p mhfpacket.MHFPacket) {
 	pkt := p.(*mhfpacket.MsgMhfOprMember)
-	// TODO: add targetid(uint32) to charid(uint32)'s database under new field
+	// TODO: none of this is stored in savedata, but which packet should actually retrieve the lists?
+	switch pkt.Action {
+	case mhfpacket.OPERATE_MEMBER_FRIENDLIST:
+		if pkt.State {
+			// add to friendlist
+		} else {
+			// remove from friendlist
+		}
+	case mhfpacket.OPERATE_MEMBER_BLACKLIST:
+		if pkt.State {
+			// add to blacklist
+		} else {
+			// remove from blacklist
+		}
+	}
 	doAckSimpleSucceed(s, pkt.AckHandle, make([]byte, 4))
 }
 

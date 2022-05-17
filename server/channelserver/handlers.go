@@ -328,7 +328,13 @@ func handleMsgSysRightsReload(s *Session, p mhfpacket.MHFPacket) {
 	doAckSimpleSucceed(s, pkt.AckHandle, []byte{0x00, 0x00, 0x00, 0x00})
 }
 
-func handleMsgMhfTransitMessage(s *Session, p mhfpacket.MHFPacket) {}
+func handleMsgMhfTransitMessage(s *Session, p mhfpacket.MHFPacket) {
+	pkt := p.(*mhfpacket.MsgMhfTransitMessage)
+	// TODO: figure out what this is supposed to return
+	// probably what world+land the targeted character is on?
+	// stubbed response will just say user not found
+	doAckBufSucceed(s, pkt.AckHandle, make([]byte, 4))
+}
 
 func handleMsgCaExchangeItem(s *Session, p mhfpacket.MHFPacket) {}
 
