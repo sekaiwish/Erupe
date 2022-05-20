@@ -110,10 +110,10 @@ const guildInfoSelectQuery = `
 SELECT
 	g.id,
 	g.name,
-	g.rank_rp,
-	g.event_rp,
-	g.main_motto,
-	g.sub_motto,
+	rank_rp,
+	event_rp,
+	main_motto,
+	sub_motto,
 	created_at,
 	leader_id,
 	lc.name as leader_name,
@@ -960,21 +960,20 @@ func handleMsgMhfInfoGuild(s *Session, p mhfpacket.MHFPacket) {
 				bf.WriteUint32(0) // Error, no alliance
 			} else {
 				allianceName, _ := stringsupport.ConvertUTF8ToShiftJIS(alliance.Name)
-				allianceParentName, _ := stringsupport.ConvertUTF8ToShiftJIS(alliance.ParentName)
-				allianceParentOwner, _ := stringsupport.ConvertUTF8ToShiftJIS(alliance.ParentOwner)
-				allianceSub1Name, _ := stringsupport.ConvertUTF8ToShiftJIS(alliance.Sub1Name)
-				allianceSub1Owner, _ := stringsupport.ConvertUTF8ToShiftJIS(alliance.Sub1Owner)
-				allianceSub2Name, _ := stringsupport.ConvertUTF8ToShiftJIS(alliance.Sub2Name)
-				allianceSub2Owner, _ := stringsupport.ConvertUTF8ToShiftJIS(alliance.Sub2Owner)
+				allianceParentName, _ := stringsupport.ConvertUTF8ToShiftJIS(alliance.ParentGuild.Name)
+				allianceParentOwner, _ := stringsupport.ConvertUTF8ToShiftJIS(alliance.ParentGuild.LeaderName)
+				allianceSub1Name, _ := stringsupport.ConvertUTF8ToShiftJIS(alliance.SubGuild1.Name)
+				allianceSub1Owner, _ := stringsupport.ConvertUTF8ToShiftJIS(alliance.SubGuild1.LeaderName)
+				allianceSub2Name, _ := stringsupport.ConvertUTF8ToShiftJIS(alliance.SubGuild2.Name)
+				allianceSub2Owner, _ := stringsupport.ConvertUTF8ToShiftJIS(alliance.SubGuild2.LeaderName)
 				bf.WriteUint32(alliance.ID)
 				bf.WriteUint32(uint32(alliance.CreatedAt.Unix()))
-				totalMembers := alliance.ParentMembers + alliance.Sub1Members + alliance.Sub2Members
-				bf.WriteUint16(uint16(totalMembers))
+				bf.WriteUint16(uint16(alliance.TotalMembers))
 				bf.WriteUint16(0) // Unk0
 				bf.WriteUint16(uint16(len(allianceName)))
 				bf.WriteBytes(allianceName)
-				if alliance.Sub1ID > 0 {
-					if alliance.Sub2ID > 0 {
+				if alliance.SubGuild1ID > 0 {
+					if alliance.SubGuild2ID > 0 {
 						bf.WriteUint8(3)
 					} else {
 						bf.WriteUint8(2)
@@ -982,44 +981,44 @@ func handleMsgMhfInfoGuild(s *Session, p mhfpacket.MHFPacket) {
 				} else {
 					bf.WriteUint8(1)
 				}
-				bf.WriteUint32(alliance.ParentID)
+				bf.WriteUint32(alliance.ParentGuildID)
 				bf.WriteUint32(0) // Unk1
-				if alliance.ParentID == guild.ID {
+				if alliance.ParentGuildID == guild.ID {
 					bf.WriteUint16(1)
 				} else {
 					bf.WriteUint16(0)
 				}
-				bf.WriteUint16(alliance.ParentRank)
-				bf.WriteUint16(alliance.ParentMembers)
+				bf.WriteUint16(alliance.ParentGuild.Rank)
+				bf.WriteUint16(alliance.ParentGuild.MemberCount)
 				bf.WriteUint16(uint16(len(allianceParentName)))
 				bf.WriteBytes(allianceParentName)
 				bf.WriteUint16(uint16(len(allianceParentOwner)))
 				bf.WriteBytes(allianceParentOwner)
-				if alliance.Sub1ID > 0 {
-					bf.WriteUint32(alliance.Sub1ID)
+				if alliance.SubGuild1ID > 0 {
+					bf.WriteUint32(alliance.SubGuild1ID)
 					bf.WriteUint32(0) // Unk1
-					if alliance.Sub1ID == guild.ID {
+					if alliance.SubGuild1ID == guild.ID {
 						bf.WriteUint16(1)
 					} else {
 						bf.WriteUint16(0)
 					}
-					bf.WriteUint16(alliance.Sub1Rank)
-					bf.WriteUint16(alliance.Sub1Members)
+					bf.WriteUint16(alliance.SubGuild1.Rank)
+					bf.WriteUint16(alliance.SubGuild1.MemberCount)
 					bf.WriteUint16(uint16(len(allianceSub1Name)))
 					bf.WriteBytes(allianceSub1Name)
 					bf.WriteUint16(uint16(len(allianceSub1Owner)))
 					bf.WriteBytes(allianceSub1Owner)
 				}
-				if alliance.Sub2ID > 0 {
-					bf.WriteUint32(alliance.Sub2ID)
+				if alliance.SubGuild2ID > 0 {
+					bf.WriteUint32(alliance.SubGuild2ID)
 					bf.WriteUint32(0) // Unk1
-					if alliance.Sub2ID == guild.ID {
+					if alliance.SubGuild2ID == guild.ID {
 						bf.WriteUint16(1)
 					} else {
 						bf.WriteUint16(0)
 					}
-					bf.WriteUint16(alliance.Sub2Rank)
-					bf.WriteUint16(alliance.Sub2Members)
+					bf.WriteUint16(alliance.SubGuild2.Rank)
+					bf.WriteUint16(alliance.SubGuild2.MemberCount)
 					bf.WriteUint16(uint16(len(allianceSub2Name)))
 					bf.WriteBytes(allianceSub2Name)
 					bf.WriteUint16(uint16(len(allianceSub2Owner)))
@@ -1329,15 +1328,14 @@ func handleMsgMhfEnumerateGuild(s *Session, p mhfpacket.MHFPacket) {
 		bf.WriteUint16(uint16(len(alliances)))
 		for _, alliance := range alliances {
 			allianceName := s.clientContext.StrConv.MustEncode(alliance.Name)
-			allianceLeaderName := s.clientContext.StrConv.MustEncode(alliance.ParentOwner)
-			totalMembers := alliance.ParentMembers+alliance.Sub1Members+alliance.Sub2Members
+			allianceLeaderName := s.clientContext.StrConv.MustEncode(alliance.ParentGuild.LeaderName)
 			bf.WriteUint8(0x00)
 			bf.WriteUint32(alliance.ID)
 			bf.WriteUint32(0x00000000)
-			bf.WriteUint16(totalMembers)
+			bf.WriteUint16(alliance.TotalMembers)
 			bf.WriteUint16(0x0000)
-			if alliance.Sub1ID > 0 {
-				if alliance.Sub2ID > 0 {
+			if alliance.SubGuild1ID > 0 {
+				if alliance.SubGuild2ID > 0 {
 					bf.WriteUint16(0x0003)
 				} else {
 					bf.WriteUint16(0x0002)

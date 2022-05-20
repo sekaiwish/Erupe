@@ -11,110 +11,34 @@ import (
 
 const allianceInfoSelectQuery = `
 SELECT
-	ga.id,
-	ga.name,
-	ga.created_at,
-	(
-		SELECT SUM(_) FROM
-		(
-			SELECT count(1) AS _ FROM guild_characters pggc WHERE pggc.guild_id = pg.id
-			UNION ALL
-			SELECT count(1) FROM guild_characters s1gc WHERE s1gc.guild_id = s1.id
-			UNION ALL
-			SELECT count(1) FROM guild_characters s2gc WHERE s2gc.guild_id = s2.id
-		) AS _
-	) AS total_members,
-	ga.parent_id,
-	pg.name as parent_name,
-	pgc.name as parent_owner,
-	(
-		SELECT count(1) FROM guild_characters pggc WHERE pggc.guild_id = parent_id
-	) AS parent_members,
-	CASE
-		WHEN pg.rank_rp <= 48 THEN pg.rank_rp/24
-		WHEN pg.rank_rp <= 288 THEN pg.rank_rp/48+1
-		WHEN pg.rank_rp <= 504 THEN pg.rank_rp/72+3
-		WHEN pg.rank_rp <= 1080 THEN (pg.rank_rp-24)/96+5
-		WHEN pg.rank_rp < 1200 THEN 16
-		ELSE 17
-	END parent_rank,
-	CASE
-		WHEN ga.sub1_id IS NULL THEN 0
-		ELSE ga.sub1_id
-	END,
-	CASE
-		WHEN s1.name IS NULL THEN ''
-		ELSE s1.name
-	END sub1_name,
-	CASE
-		WHEN s1c.name IS NULL THEN ''
-		ELSE s1c.name
-	END sub1_owner,
-	(
-		SELECT count(1) FROM guild_characters s1gc WHERE s1gc.guild_id = sub1_id
-	) AS sub1_members,
-	CASE
-		WHEN s1.rank_rp IS NULL then 0
-		WHEN s1.rank_rp <= 48 THEN s1.rank_rp/24
-		WHEN s1.rank_rp <= 288 THEN s1.rank_rp/48+1
-		WHEN s1.rank_rp <= 504 THEN s1.rank_rp/72+3
-		WHEN s1.rank_rp <= 1080 THEN (s1.rank_rp-24)/96+5
-		WHEN s1.rank_rp < 1200 THEN 16
-		ELSE 17
-	END sub1_rank,
-	CASE
-		WHEN ga.sub2_id IS NULL THEN 0
-		ELSE ga.sub2_id
-	END,
-	CASE
-		WHEN s2.name IS NULL THEN ''
-		ELSE s2.name
-	END sub2_name,
-	CASE
-		WHEN s2c.name IS NULL THEN ''
-		ELSE s2c.name
-	END sub2_owner,
-	(
-		SELECT count(1) FROM guild_characters s2gc WHERE s2gc.guild_id = sub2_id
-	) AS sub2_members,
-	CASE
-		WHEN s2.rank_rp IS NULL then 0
-		WHEN s2.rank_rp <= 48 THEN s2.rank_rp/24
-		WHEN s2.rank_rp <= 288 THEN s2.rank_rp/48+1
-		WHEN s2.rank_rp <= 504 THEN s2.rank_rp/72+3
-		WHEN s2.rank_rp <= 1080 THEN (s2.rank_rp-24)/96+5
-		WHEN s2.rank_rp < 1200 THEN 16
-		ELSE 17
-	END sub2_rank
-	FROM guild_alliances ga
-	LEFT JOIN guilds pg ON pg.id = ga.parent_id
-	LEFT JOIN characters pgc ON pgc.id = pg.leader_id
-	LEFT JOIN guilds s1 ON s1.id = ga.sub1_id
-	LEFT JOIN characters s1c ON s1c.id = s1.leader_id
-	LEFT JOIN guilds s2 ON s2.id = ga.sub2_id
-	LEFT JOIN characters s2c ON s2c.id = s2.leader_id
+ga.id,
+ga.name,
+created_at,
+parent_id,
+CASE
+	WHEN ga.sub1_id IS NULL THEN 0
+	ELSE ga.sub1_id
+END,
+CASE
+	WHEN ga.sub2_id IS NULL THEN 0
+	ELSE ga.sub2_id
+END
+FROM guild_alliances ga
 `
 
 type GuildAlliance struct {
 	ID            uint32    `db:"id"`
 	Name          string    `db:"name"`
 	CreatedAt     time.Time `db:"created_at"`
-	TotalMembers  uint32    `db:"total_members"`
-	ParentID      uint32    `db:"parent_id"`
-	ParentName    string    `db:"parent_name"`
-	ParentOwner   string    `db:"parent_owner"`
-	ParentMembers uint16    `db:"parent_members"`
-	ParentRank    uint16    `db:"parent_rank"`
-	Sub1ID        uint32    `db:"sub1_id"`
-	Sub1Name      string    `db:"sub1_name"`
-	Sub1Owner     string    `db:"sub1_owner"`
-	Sub1Members   uint16    `db:"sub1_members"`
-	Sub1Rank      uint16    `db:"sub1_rank"`
-	Sub2ID        uint32    `db:"sub2_id"`
-	Sub2Name      string    `db:"sub2_name"`
-	Sub2Owner     string    `db:"sub2_owner"`
-	Sub2Members   uint16    `db:"sub2_members"`
-	Sub2Rank      uint16    `db:"sub2_rank"`
+	TotalMembers  uint16
+
+	ParentGuildID uint32    `db:"parent_id"`
+	SubGuild1ID   uint32    `db:"sub1_id"`
+	SubGuild2ID   uint32    `db:"sub2_id"`
+
+	ParentGuild   Guild
+	SubGuild1     Guild
+	SubGuild2     Guild
 }
 
 func GetAllianceData(s *Session, AllianceID uint32) (*GuildAlliance, error) {
@@ -122,7 +46,6 @@ func GetAllianceData(s *Session, AllianceID uint32) (*GuildAlliance, error) {
 		%s
 		WHERE ga.id = $1
 	`, allianceInfoSelectQuery), AllianceID)
-	alliance := &GuildAlliance{}
 	if err != nil {
 		s.logger.Error("Failed to retrieve alliance data from database", zap.Error(err))
 		return nil, err
@@ -132,12 +55,8 @@ func GetAllianceData(s *Session, AllianceID uint32) (*GuildAlliance, error) {
 	if !hasRow {
 		return nil, nil
 	}
-	err = rows.StructScan(alliance)
-	if err != nil {
-		s.logger.Error("Failed to build alliance struct from data", zap.Error(err))
-		return nil, err
-	}
-	return alliance, nil
+
+	return buildAllianceObjectFromDbResult(rows, err, s)
 }
 
 func buildAllianceObjectFromDbResult(result *sqlx.Rows, err error, s *Session) (*GuildAlliance, error) {
@@ -148,6 +67,34 @@ func buildAllianceObjectFromDbResult(result *sqlx.Rows, err error, s *Session) (
 	if err != nil {
 		s.logger.Error("failed to retrieve alliance from database", zap.Error(err))
 		return nil, err
+	}
+
+	parentGuild, err := GetGuildInfoByID(s, alliance.ParentGuildID)
+	if err != nil {
+		s.logger.Fatal("Failed to get parent guild info", zap.Error(err))
+	} else {
+		alliance.ParentGuild = *parentGuild
+		alliance.TotalMembers += parentGuild.MemberCount
+	}
+
+	if alliance.SubGuild1ID > 0 {
+		subGuild1, err := GetGuildInfoByID(s, alliance.SubGuild1ID)
+		if err != nil {
+			s.logger.Fatal("Failed to get sub guild 1 info", zap.Error(err))
+		} else {
+			alliance.SubGuild1 = *subGuild1
+			alliance.TotalMembers += subGuild1.MemberCount
+		}
+	}
+
+	if alliance.SubGuild2ID > 0 {
+		subGuild2, err := GetGuildInfoByID(s, alliance.SubGuild2ID)
+		if err != nil {
+			s.logger.Fatal("Failed to get sub guild 2 info", zap.Error(err))
+		} else {
+			alliance.SubGuild2 = *subGuild2
+			alliance.TotalMembers += subGuild2.MemberCount
+		}
 	}
 
 	return alliance, nil
@@ -176,7 +123,7 @@ func handleMsgMhfOperateJoint(s *Session, p mhfpacket.MHFPacket) {
 
 	switch pkt.Action {
 	case mhfpacket.OPERATE_JOINT_DISBAND:
-		if guild.LeaderCharID == s.charID && alliance.ParentID == guild.ID {
+		if guild.LeaderCharID == s.charID && alliance.ParentGuildID == guild.ID {
 			_, err = s.server.db.Exec("DELETE FROM guild_alliances WHERE id=$1", alliance.ID)
 			if err != nil {
 				s.logger.Fatal("Failed to disband alliance", zap.Error(err))
